@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { ForecastDashboard } from './components/ForecastDashboard'
 import { GuidedSetup } from './components/GuidedSetup'
 import { createDemoPlan } from './storage/demoPlan'
-import { loadPlan, savePlan, type PersistedPlan } from './storage/forecastStore'
+import { clearPlan, loadPlan, savePlan, type PersistedPlan } from './storage/forecastStore'
 
 /** Owns saved source data and routes between onboarding and the forecast view. */
 function App() {
@@ -26,6 +26,13 @@ function App() {
     completeSetup(createDemoPlan())
   }
 
+  /** Clears Cashflow's source data and restores the blank first-run screen. */
+  function resetSavedPlan() {
+    clearPlan()
+    setPlan(null)
+    setIsSettingUp(false)
+  }
+
   if (isSettingUp) {
     return (
       <main className="app-shell">
@@ -34,7 +41,7 @@ function App() {
     )
   }
 
-  if (plan !== null) return <ForecastDashboard plan={plan} onPlanChange={completeSetup} onRestart={() => setIsSettingUp(true)} />
+  if (plan !== null) return <ForecastDashboard plan={plan} onPlanChange={completeSetup} onRestart={() => setIsSettingUp(true)} onReset={resetSavedPlan} />
 
   return (
     <main className="app-shell">

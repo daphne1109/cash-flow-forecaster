@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createDemoPlan } from '../src/storage/demoPlan'
 import {
   FORECAST_STORAGE_KEY,
+  clearPlan,
   type StorageAdapter,
   loadPlan,
   savePlan,
@@ -18,6 +19,9 @@ function createMemoryStorage(): StorageAdapter & { values: Map<string, string> }
     },
     setItem(key, value) {
       values.set(key, value)
+    },
+    removeItem(key) {
+      values.delete(key)
     },
   }
 }
@@ -53,6 +57,16 @@ describe('forecast plan storage', () => {
     expect(storage.values.has(FORECAST_STORAGE_KEY)).toBe(false)
   })
 
+  it('removes only the saved forecast plan on reset', () => {
+    const storage = createMemoryStorage()
+    storage.values.set(FORECAST_STORAGE_KEY, JSON.stringify(createDemoPlan()))
+    storage.values.set('unrelated-key', 'keep me')
+
+    expect(clearPlan(storage)).toBe(true)
+    expect(storage.values.has(FORECAST_STORAGE_KEY)).toBe(false)
+    expect(storage.values.get('unrelated-key')).toBe('keep me')
+  })
+
   it('handles unavailable storage without throwing', () => {
     const unavailableStorage: StorageAdapter = {
       getItem() {
@@ -61,9 +75,13 @@ describe('forecast plan storage', () => {
       setItem() {
         throw new Error('Storage is unavailable')
       },
+      removeItem() {
+        throw new Error('Storage is unavailable')
+      },
     }
 
     expect(loadPlan(unavailableStorage)).toBeNull()
     expect(savePlan(createDemoPlan(), unavailableStorage)).toBe(false)
+    expect(clearPlan(unavailableStorage)).toBe(false)
   })
 })

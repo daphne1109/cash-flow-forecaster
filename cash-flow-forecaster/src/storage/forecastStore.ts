@@ -22,6 +22,7 @@ export interface PersistedPlan {
 export interface StorageAdapter {
   getItem(key: string): string | null
   setItem(key: string, value: string): void
+  removeItem(key: string): void
 }
 
 /**
@@ -65,6 +66,26 @@ export function savePlan(
 
   try {
     storage.setItem(FORECAST_STORAGE_KEY, JSON.stringify(plan))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Removes only this app's persisted plan, without touching other site data.
+ * The boolean lets callers reset in-memory state even if a restricted browser
+ * refuses the local-storage write.
+ */
+export function clearPlan(
+  storage: StorageAdapter | null = getBrowserStorage(),
+): boolean {
+  if (storage === null) {
+    return false
+  }
+
+  try {
+    storage.removeItem(FORECAST_STORAGE_KEY)
     return true
   } catch {
     return false

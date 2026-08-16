@@ -11,10 +11,11 @@ interface ForecastDashboardProps {
   plan: PersistedPlan
   onPlanChange: (plan: PersistedPlan) => void
   onRestart: () => void
+  onReset: () => void
 }
 
 /** Renders one auditable forecast result as insights, chart, source items, and ledger. */
-export function ForecastDashboard({ plan, onPlanChange, onRestart }: ForecastDashboardProps) {
+export function ForecastDashboard({ plan, onPlanChange, onRestart, onReset }: ForecastDashboardProps) {
   const [editingItem, setEditingItem] = useState<ForecastItem | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const forecast = generateForecast(plan.settings, plan.items)
@@ -34,10 +35,17 @@ export function ForecastDashboard({ plan, onPlanChange, onRestart }: ForecastDas
     }
   }
 
+  /** Confirms before removing the persisted plan and returning to a blank app. */
+  function resetPlan() {
+    if (window.confirm('Reset your saved plan? This removes all scheduled items and cannot be undone.')) {
+      onReset()
+    }
+  }
+
   return <main className="dashboard-shell">
     <header className="dashboard-header">
       <div><p className="eyebrow">Cashflow · 30-day outlook</p><h1>Know the tight days before they arrive.</h1></div>
-      <button className="button-quiet" type="button" onClick={onRestart}>Start a new plan</button>
+      <div className="header-actions"><button className="button-quiet" type="button" onClick={onRestart}>Start a new plan</button><button className="button-danger" type="button" onClick={resetPlan}>Reset saved plan</button></div>
     </header>
 
     <section className="insight-grid" aria-label="Forecast insights">

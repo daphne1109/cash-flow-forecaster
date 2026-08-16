@@ -14,6 +14,11 @@ list does not shift or disappear while the user is reviewing an existing plan.
 The dialog has a labelled close control, supports Escape, and closes when its
 backdrop is selected.
 
+`Reset saved plan` asks for confirmation, clears only Cashflow's local-storage
+key, and returns the user to the blank welcome screen. `Start a new plan` is
+kept separate so users can explore a new setup without discarding their current
+saved forecast until they explicitly reset it.
+
 The low-balance row and first-shortfall row include text badges as well as
 colour treatment, so a risk state does not rely on colour alone. The dashboard
 also states the prototype boundary: data is stored only in the current browser

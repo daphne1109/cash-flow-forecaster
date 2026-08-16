@@ -41,7 +41,7 @@ select {
 /* The dashboard is a ledger-first view: summary signals, then a visual trend,
    then the transaction evidence needed to trust that trend. */
 .dashboard-shell { width: min(100%, 78rem); margin: 0 auto; padding: clamp(1.25rem, 4vw, 3.5rem) clamp(1rem, 3vw, 2rem) 4rem; }
-.dashboard-header, .panel-heading, .dashboard-item-list li, .item-actions, .insight-grid { display: flex; align-items: center; }
+.dashboard-header, .panel-heading, .dashboard-item-list li, .item-actions, .insight-grid, .header-actions { display: flex; align-items: center; }
 .dashboard-header, .panel-heading { justify-content: space-between; gap: 1rem; }
 .dashboard-header h1 { max-width: 38rem; margin-top: .25rem; }
 .insight-grid { gap: 1rem; margin: 2rem 0 1rem; }
@@ -271,6 +271,10 @@ button:focus-visible {
   font-weight: 700;
   cursor: pointer;
 }
+
+.header-actions { flex-wrap: wrap; justify-content: flex-end; gap: .65rem; }
+.button-danger { min-height: 2.75rem; padding: .65rem 1rem; color: #972e26; background: #fff8f6; border: 1px solid #dba9a1; border-radius: .55rem; font-weight: 700; cursor: pointer; }
+.button-danger:hover { background: #ffebe7; }
 
 .button-primary {
   color: #ffffff;
