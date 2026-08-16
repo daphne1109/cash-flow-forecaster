@@ -9,6 +9,7 @@ import type {
 } from '../domain/types'
 import { createEstimatedItem } from '../guided/createEstimatedItem'
 import { billCategories } from '../guided/billCategories'
+import { subscriptionCategories } from '../guided/subscriptionCategories'
 import type { PersistedPlan } from '../storage/forecastStore'
 
 interface GuidedSetupProps {
@@ -25,7 +26,7 @@ interface PromptDefinition {
   hint: string
   allowsMultiple: boolean
   addActionLabel: string
-  kind: 'single' | 'bills'
+  kind: 'single' | 'bills' | 'subscriptions'
 }
 
 const prompts: readonly PromptDefinition[] = [
@@ -74,15 +75,15 @@ const prompts: readonly PromptDefinition[] = [
     kind: 'bills',
   },
   {
-    title: 'Any subscriptions you pay for?',
-    description: 'Small repeat charges are easy to miss in a busy month.',
-    defaultName: 'Spotify',
+    title: 'Which subscriptions sound familiar?',
+    description: 'Choose every service you pay for. Small repeat charges are easy to miss.',
+    defaultName: '',
     type: 'expense',
     recurrences: ['monthly'],
-    hint: 'Examples: YouTube Premium, iCloud, OneDrive, Duolingo, or Goodnotes.',
-    allowsMultiple: true,
-    addActionLabel: 'Add subscription',
-    kind: 'single',
+    hint: 'Nothing is added until you enter the amount and next billing date.',
+    allowsMultiple: false,
+    addActionLabel: '',
+    kind: 'subscriptions',
   },
   {
     title: 'Anything else expected in the next 30 days?',
@@ -116,6 +117,8 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
   const [error, setError] = useState<string | null>(null)
   const [selectedBillIds, setSelectedBillIds] = useState<string[]>([])
   const [billAnswers, setBillAnswers] = useState<Record<string, BillAnswer>>({})
+  const [selectedSubscriptionIds, setSelectedSubscriptionIds] = useState<string[]>([])
+  const [subscriptionAnswers, setSubscriptionAnswers] = useState<Record<string, BillAnswer>>({})
 
   const prompt = step >= 0 ? prompts[step] : null
 
@@ -151,6 +154,8 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     setRecurrence(nextPrompt.recurrences[0])
     setSelectedBillIds([])
     setBillAnswers({})
+    setSelectedSubscriptionIds([])
+    setSubscriptionAnswers({})
     setError(null)
   }
 
@@ -231,6 +236,44 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     }))
   }
 
+  /** Mirrors bill selection for optional recurring services. */
+  function toggleSubscriptionCategory(categoryId: string) {
+    const category = subscriptionCategories.find((candidate) => candidate.id === categoryId)
+    if (!category) {
+      return
+    }
+
+    if (selectedSubscriptionIds.includes(categoryId)) {
+      setSelectedSubscriptionIds((currentIds) => currentIds.filter((id) => id !== categoryId))
+      setSubscriptionAnswers((currentAnswers) => {
+        const { [categoryId]: _, ...remainingAnswers } = currentAnswers
+        return remainingAnswers
+      })
+      return
+    }
+
+    setSelectedSubscriptionIds((currentIds) => [...currentIds, categoryId])
+    setSubscriptionAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [categoryId]: {
+        name: category.defaultName,
+        amount: '',
+        firstDate: settings?.startDate ?? startDate,
+      },
+    }))
+  }
+
+  function updateSubscriptionAnswer(
+    categoryId: string,
+    field: keyof BillAnswer,
+    value: string,
+  ) {
+    setSubscriptionAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [categoryId]: { ...currentAnswers[categoryId]!, [field]: value },
+    }))
+  }
+
   /** Validates all selected bills as a batch, then adds distinct source items. */
   function addBillsAndContinue() {
     if (selectedBillIds.length === 0) {
@@ -266,6 +309,45 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     }
 
     const updatedItems = [...items, ...billItems]
+    setItems(updatedItems)
+    moveToPrompt(step + 1, updatedItems)
+  }
+
+  /** Adds every selected subscription as an independent monthly estimate. */
+  function addSubscriptionsAndContinue() {
+    if (selectedSubscriptionIds.length === 0) {
+      moveToPrompt(step + 1)
+      return
+    }
+
+    const subscriptionItems: ForecastItem[] = []
+    for (const categoryId of selectedSubscriptionIds) {
+      const answer = subscriptionAnswers[categoryId]
+      const amountCents = answer ? parseMoneyToCents(answer.amount) : null
+
+      if (
+        answer === undefined ||
+        amountCents === null ||
+        answer.name.trim() === '' ||
+        !isValidDateKey(answer.firstDate)
+      ) {
+        setError('Add a name, amount, and next billing date for every selected subscription.')
+        return
+      }
+
+      subscriptionItems.push(
+        createEstimatedItem({
+          id: crypto.randomUUID(),
+          name: answer.name.trim(),
+          type: 'expense',
+          amountCents,
+          firstOccurrenceDate: answer.firstDate,
+          recurrence: 'monthly',
+        }),
+      )
+    }
+
+    const updatedItems = [...items, ...subscriptionItems]
     setItems(updatedItems)
     moveToPrompt(step + 1, updatedItems)
   }
@@ -369,6 +451,68 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
         <div className="form-actions">
           <button className="button-primary" type="button" onClick={addBillsAndContinue}>
             {selectedBillIds.length === 0 ? 'Skip for now' : 'Add selected bills and continue'}
+          </button>
+        </div>
+      </section>
+    )
+  }
+
+  if (prompt.kind === 'subscriptions') {
+    return (
+      <section className="setup-card" aria-labelledby="guided-prompt-title">
+        <p className="step-label">Money check-in · {step + 1} of {prompts.length}</p>
+        <div className="progress-rail" aria-label={`Step ${step + 1} of ${prompts.length}`}>
+          {prompts.map((_, index) => (
+            <span className={index <= step ? 'rail-dot rail-dot-active' : 'rail-dot'} key={index} />
+          ))}
+        </div>
+        <h2 id="guided-prompt-title">{prompt.title}</h2>
+        <p className="support-copy">{prompt.description}</p>
+        <p className="prompt-hint">{prompt.hint}</p>
+        <div className="category-grid" aria-label="Subscription choices">
+          {subscriptionCategories.map((category) => {
+            const isSelected = selectedSubscriptionIds.includes(category.id)
+            return (
+              <button
+                aria-pressed={isSelected}
+                className={isSelected ? 'category-choice category-choice-selected' : 'category-choice'}
+                key={category.id}
+                onClick={() => toggleSubscriptionCategory(category.id)}
+                type="button"
+              >
+                {category.label}
+              </button>
+            )
+          })}
+        </div>
+        {selectedSubscriptionIds.length > 0 && (
+          <div className="bill-answer-list">
+            <p className="selected-heading">Add what you remember for each selected service</p>
+            {selectedSubscriptionIds.map((categoryId) => {
+              const answer = subscriptionAnswers[categoryId]!
+              return (
+                <div className="bill-answer" key={categoryId}>
+                  <label>
+                    Subscription name
+                    <input value={answer.name} onChange={(event) => updateSubscriptionAnswer(categoryId, 'name', event.target.value)} />
+                  </label>
+                  <label>
+                    Typical amount
+                    <input inputMode="decimal" value={answer.amount} onChange={(event) => updateSubscriptionAnswer(categoryId, 'amount', event.target.value)} placeholder="RM 0.00" />
+                  </label>
+                  <label>
+                    Next billing date
+                    <input type="date" value={answer.firstDate} onChange={(event) => updateSubscriptionAnswer(categoryId, 'firstDate', event.target.value)} />
+                  </label>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="form-actions">
+          <button className="button-primary" type="button" onClick={addSubscriptionsAndContinue}>
+            {selectedSubscriptionIds.length === 0 ? 'Skip for now' : 'Add selected subscriptions and continue'}
           </button>
         </div>
       </section>

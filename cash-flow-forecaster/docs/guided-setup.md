@@ -31,6 +31,9 @@ selection. No category adds a charge automatically. Every submitted category
 becomes a separate monthly estimate so the eventual ledger can explain its
 individual effect on the forecast.
 
-Subscriptions remain a repeatable mini-list. After adding an answer, the form
-clears while the saved item count remains visible; the user selects `Continue
-when finished` only after entering as many relevant items as they want.
+The subscription question uses the same recognition-first multi-select pattern.
+It includes Spotify, YouTube Premium, Netflix, Disney+ Hotstar, Apple iCloud,
+Google One, OneDrive, Dropbox, ChatGPT, Canva, Notion, Figma, Goodnotes,
+Notability, Duolingo, Hostinger, GitHub, and an other-subscription option.
+Selecting a service only opens its editable amount/date row; it never assumes a
+price or creates a charge without the user's confirmation.
