@@ -61,8 +61,6 @@ const RECURRENCES: readonly Recurrence[] = [
   'yearly',
 ]
 const ITEM_SOURCES: readonly ItemSource[] = ['guided-estimate', 'manual']
-const DATE_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
-
 export function isItemType(value: unknown): value is ItemType {
   return typeof value === 'string' && ITEM_TYPES.includes(value as ItemType)
 }
@@ -75,24 +73,7 @@ export function isItemSource(value: unknown): value is ItemSource {
   return typeof value === 'string' && ITEM_SOURCES.includes(value as ItemSource)
 }
 
-export function isValidDateKey(value: string): boolean {
-  const match = DATE_KEY_PATTERN.exec(value)
-
-  if (!match) {
-    return false
-  }
-
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
-  const date = new Date(year, month - 1, day)
-
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
-  )
-}
+export { isValidDateKey } from './date'
 
 export function validateForecastItem(item: ForecastItem): ValidationResult {
   const errors: string[] = []
@@ -162,3 +143,4 @@ export function validateForecastSettings(
 
   return { isValid: errors.length === 0, errors }
 }
+import { isValidDateKey } from './date'
