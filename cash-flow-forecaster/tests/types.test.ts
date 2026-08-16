@@ -17,6 +17,7 @@ const validItem: ForecastItem = {
   source: 'guided-estimate',
 }
 
+// Shared valid fixtures make each test isolate one business rule at a time.
 const validSettings: ForecastSettings = {
   openingBalanceCents: 100_000,
   startDate: '2026-08-01',
@@ -34,6 +35,7 @@ describe('date keys', () => {
 })
 
 describe('forecast item validation', () => {
+  // Guided prompts and manual entry share exactly the same domain contract.
   it('accepts a valid guided estimate', () => {
     expect(validateForecastItem(validItem)).toEqual({
       isValid: true,
@@ -68,6 +70,7 @@ describe('forecast item validation', () => {
 })
 
 describe('forecast settings validation', () => {
+  // An already-negative balance is a valid financial state, not malformed input.
   it('allows a negative opening balance', () => {
     expect(
       validateForecastSettings({ ...validSettings, openingBalanceCents: -5_000 }),

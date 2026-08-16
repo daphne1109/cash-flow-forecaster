@@ -1,3 +1,5 @@
+import { isValidDateKey } from './date'
+
 /**
  * Pure domain contracts for the cash-flow engine.
  *
@@ -10,6 +12,7 @@ export type ItemType = 'income' | 'expense'
 export type Recurrence = 'once' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
 export type ItemSource = 'guided-estimate' | 'manual'
 
+/** Source data supplied directly by the user or created from guided prompts. */
 export interface ForecastItem {
   id: string
   name: string
@@ -26,6 +29,7 @@ export interface ForecastSettings {
   horizonDays: 30
 }
 
+/** A single dated effect produced after recurrence expansion. */
 export interface Occurrence {
   itemId: string
   itemName: string
@@ -40,6 +44,7 @@ export interface DailyForecast {
   endingBalanceCents: number
 }
 
+/** Derived 30-day output used by both the ledger and chart. */
 export interface ForecastResult {
   days: DailyForecast[]
   lowestBalanceCents: number
@@ -52,6 +57,8 @@ export interface ValidationResult {
   errors: string[]
 }
 
+// Keep accepted values centralised so runtime validation and TypeScript's
+// compile-time unions cannot drift apart as new UI flows are added.
 const ITEM_TYPES: readonly ItemType[] = ['income', 'expense']
 const RECURRENCES: readonly Recurrence[] = [
   'once',
@@ -61,20 +68,30 @@ const RECURRENCES: readonly Recurrence[] = [
   'yearly',
 ]
 const ITEM_SOURCES: readonly ItemSource[] = ['guided-estimate', 'manual']
+
+/** Narrows unknown input to a supported item direction. */
 export function isItemType(value: unknown): value is ItemType {
   return typeof value === 'string' && ITEM_TYPES.includes(value as ItemType)
 }
 
+/** Narrows unknown input to a recurrence the forecast engine can expand. */
 export function isRecurrence(value: unknown): value is Recurrence {
   return typeof value === 'string' && RECURRENCES.includes(value as Recurrence)
 }
 
+/** Narrows unknown input to a transparent item-origin marker. */
 export function isItemSource(value: unknown): value is ItemSource {
   return typeof value === 'string' && ITEM_SOURCES.includes(value as ItemSource)
 }
 
 export { isValidDateKey } from './date'
 
+/**
+ * Validates one source item before it reaches recurrence expansion.
+ *
+ * This function does not mutate data or format user-facing text, which makes it
+ * safe to use from forms, local-storage recovery, and future server boundaries.
+ */
 export function validateForecastItem(item: ForecastItem): ValidationResult {
   const errors: string[] = []
 
@@ -82,6 +99,8 @@ export function validateForecastItem(item: ForecastItem): ValidationResult {
     errors.push('An item must have an id.')
   }
 
+  // Names are user-visible ledger labels, so reject blank and impractically
+  // long values at the domain boundary rather than only in a form component.
   const trimmedName = item.name.trim()
   if (trimmedName.length === 0 || trimmedName.length > 60) {
     errors.push('Item name must contain between 1 and 60 characters.')
@@ -112,10 +131,14 @@ export function validateForecastItem(item: ForecastItem): ValidationResult {
     const month = Number(monthText)
     const day = Number(dayText)
 
+    // Days 1-28 exist in every month, keeping the monthly recurrence policy
+    // deterministic rather than introducing an undocumented fallback.
     if (item.recurrence === 'monthly' && day > 28) {
       errors.push('Monthly items must use days 1 through 28.')
     }
 
+    // A yearly 29 February needs a product policy for non-leap years; this
+    // small prototype rejects it rather than guessing on the user's behalf.
     if (item.recurrence === 'yearly' && month === 2 && day === 29) {
       errors.push('Yearly items cannot use February 29.')
     }
@@ -124,6 +147,12 @@ export function validateForecastItem(item: ForecastItem): ValidationResult {
   return { isValid: errors.length === 0, errors }
 }
 
+/**
+ * Validates the immutable inputs that define a 30-day forecast window.
+ *
+ * Negative opening balances are intentional: later forecast logic needs to
+ * report the start date as the first negative day in that situation.
+ */
 export function validateForecastSettings(
   settings: ForecastSettings,
 ): ValidationResult {
@@ -143,4 +172,3 @@ export function validateForecastSettings(
 
   return { isValid: errors.length === 0, errors }
 }
-import { isValidDateKey } from './date'

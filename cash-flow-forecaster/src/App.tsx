@@ -1,3 +1,10 @@
+/**
+ * Application shell.
+ *
+ * Product features are introduced in later milestones; keeping this component
+ * deliberately small verifies that the React entry point is healthy without
+ * coupling the initial scaffold to unfinished forecast behaviour.
+ */
 function App() {
   return (
     <main className="app-shell">

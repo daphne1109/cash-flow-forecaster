@@ -10,6 +10,7 @@ import {
 } from '../src/domain/date'
 
 describe('local calendar dates', () => {
+  // Date keys are intentionally calendar-only values, not UTC timestamps.
   it('parses and formats date-only values without timestamps', () => {
     expect(parseDateKey('2026-08-01')).toEqual({ year: 2026, month: 8, day: 1 })
     expect(formatDateKey({ year: 2026, month: 8, day: 1 })).toBe('2026-08-01')

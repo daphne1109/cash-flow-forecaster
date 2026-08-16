@@ -1,3 +1,5 @@
+/* Foundation tokens keep the initial scaffold calm and legible. Product
+   components will extend this system rather than introducing isolated styles. */
 :root {
   color: #13202b;
   background: #f5f8f7;
@@ -6,6 +8,7 @@
   text-rendering: optimizeLegibility;
 }
 
+/* Predictable sizing prevents form controls from overflowing their containers. */
 * {
   box-sizing: border-box;
 }
@@ -22,6 +25,8 @@ select {
   font: inherit;
 }
 
+/* The temporary shell proves the app mounts cleanly while leaving room for the
+   guided setup flow to replace it in a later milestone. */
 .app-shell {
   display: grid;
   min-height: 100vh;

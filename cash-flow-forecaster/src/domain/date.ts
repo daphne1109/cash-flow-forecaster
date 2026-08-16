@@ -14,6 +14,8 @@ function createLocalDate(parts: DateParts): Date {
   const { year, month, day } = parts
   const date = new Date(year, month - 1, day)
 
+  // JavaScript normalises invalid dates (for example, 30 February becomes a
+  // March date), so compare every component after construction.
   if (
     !Number.isInteger(year) ||
     !Number.isInteger(month) ||
@@ -36,6 +38,7 @@ function toDateParts(date: Date): DateParts {
   }
 }
 
+/** Throws a clear domain error before date arithmetic is attempted. */
 function assertDateKey(value: string): void {
   if (!isValidDateKey(value)) {
     throw new RangeError(`Invalid local calendar date: ${value}`)
@@ -81,6 +84,7 @@ export function compareDateKeys(left: string, right: string): number {
   assertDateKey(left)
   assertDateKey(right)
 
+  // ISO calendar keys sort lexicographically in the same order as dates.
   return left.localeCompare(right)
 }
 
@@ -101,10 +105,14 @@ export function addMonths(dateKey: string, months: number): string {
   }
 
   const { year, month, day } = parseDateKey(dateKey)
+  // Work with an absolute month index so positive and negative cross-year
+  // offsets use the same calculation.
   const targetMonthIndex = year * 12 + (month - 1) + months
   const targetYear = Math.floor(targetMonthIndex / 12)
   const targetMonth = (targetMonthIndex % 12) + 1
 
+  // formatDateKey rejects impossible dates instead of silently rolling 31 Jan
+  // into March. Validation makes such recurring rules unreachable in practice.
   return formatDateKey({ year: targetYear, month: targetMonth, day })
 }
 
@@ -126,6 +134,8 @@ export function daysInInclusiveRange(start: string, end: string): string[] {
   const days: string[] = []
   let current = start
 
+  // The end date is included because a payment on the final forecast day must
+  // contribute to the reported daily balance.
   while (compareDateKeys(current, end) <= 0) {
     days.push(current)
     current = addDays(current, 1)
