@@ -24,7 +24,16 @@ unreachable for recurring monthly/yearly items.
 occurrences inside an inclusive forecast window. Its first task is to
 fast-forward backdated recurring items: a weekly item that starts in July still
 produces all of its August dates. One-off items before the window produce no
-occurrences. The next forecast step will aggregate these occurrences by day.
+occurrences. The forecast engine aggregates these occurrences by day.
+
+## Daily forecast calculation
+
+`src/domain/forecast.ts` groups occurrences by local calendar date, sums each
+day's net change, and applies it to a running balance. Each generated row keeps
+the original occurrences, allowing the ledger to explain a charted balance
+rather than asking users to trust an opaque result. The summary deliberately
+keeps the earliest date for a tied low balance and treats a negative opening
+balance as negative on the forecast start date.
 
 The model supports `once`, `weekly`, `biweekly`, `monthly`, and `yearly`
 recurrence. `biweekly` is deliberate: it represents common groceries and

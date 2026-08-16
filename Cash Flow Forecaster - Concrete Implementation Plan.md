@@ -68,9 +68,9 @@ Expected checkpoints:
 | 2026-08-01 | +RM2,500.00 | RM3,500.00 |
 | 2026-08-02 | -RM1,100.00 | RM2,400.00 |
 | 2026-08-03 | -RM120.00 | RM2,280.00 |
-| 2026-08-17 | -RM120.00 | RM1,920.00 |
-| 2026-08-20 | -RM1,900.00 | RM20.00 |
-| 2026-08-24 | -RM120.00 | -RM100.00 |
+| 2026-08-17 | -RM120.00 | RM1,995.00 |
+| 2026-08-20 | -RM1,900.00 | RM95.00 |
+| 2026-08-24 | -RM120.00 | -RM25.00 |
 
 This is a known-answer test. Calculate every figure once by hand or in a temporary spreadsheet, then have the app produce the same result. Do not put the expected result into the UI; put it in the automated test.
 
