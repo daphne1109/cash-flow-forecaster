@@ -78,14 +78,20 @@ export function ForecastDashboard({ plan, onPlanChange, onRestart }: ForecastDas
     <section className="ledger-panel" aria-labelledby="ledger-title">
       <div className="panel-heading"><div><p className="step-label">Why the balance moves</p><h2 id="ledger-title">Daily ledger</h2></div><span className="chart-note">All 30 days</span></div>
       <div className="ledger-scroll"><table><thead><tr><th>Date</th><th>Scheduled items</th><th>Daily change</th><th>End-of-day balance</th></tr></thead><tbody>
-        {forecast.days.map((day) => <tr className={day.date === forecast.lowestBalanceDate ? 'ledger-lowest' : day.date === forecast.firstNegativeDate ? 'ledger-negative' : ''} key={day.date}>
-          <td>{formatDate(day.date)}</td>
+        {forecast.days.map((day) => {
+          const isLowestDay = day.date === forecast.lowestBalanceDate
+          const isFirstNegativeDay = day.date === forecast.firstNegativeDate
+
+          return <tr className={isLowestDay ? 'ledger-lowest' : isFirstNegativeDay ? 'ledger-negative' : ''} key={day.date}>
+          <td>{formatDate(day.date)}{isLowestDay && <span className="ledger-badge">Lowest balance</span>}{isFirstNegativeDay && <span className="ledger-badge ledger-badge-warning">First shortfall</span>}</td>
           <td>{day.occurrences.length === 0 ? <span className="muted">No scheduled items</span> : day.occurrences.map((item) => <span className="ledger-occurrence" key={`${item.itemId}-${item.date}`}>{item.itemName} {item.signedAmountCents >= 0 ? '+' : '-'}{formatCents(Math.abs(item.signedAmountCents))}</span>)}</td>
           <td className={day.netChangeCents < 0 ? 'expense-amount' : day.netChangeCents > 0 ? 'income-amount' : ''}>{signedCents(day.netChangeCents)}</td>
           <td className={day.endingBalanceCents < 0 ? 'expense-amount' : ''}>{formatCents(day.endingBalanceCents)}</td>
-        </tr>)}
+        </tr>
+        })}
       </tbody></table></div>
     </section>
+    <footer className="product-note">Your plan is stored only in this browser. Cashflow is a planning tool, not financial advice.</footer>
   </main>
 }
 

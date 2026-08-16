@@ -73,6 +73,8 @@ th, td { padding: .75rem .6rem; border-top: 1px solid #e1ece9; vertical-align: t
 .ledger-occurrence { display: block; margin-bottom: .2rem; }
 .ledger-lowest { background: #fff4f1; }
 .ledger-negative { background: #fffaf7; }
+.ledger-badge { display: block; width: max-content; margin-top: .35rem; padding: .14rem .38rem; color: #814018; background: #fff0df; border-radius: .25rem; font-size: .72rem; font-weight: 700; }
+.ledger-badge-warning { color: #8e2720; background: #ffe8e3; }
 .chart-tooltip { display: grid; gap: .25rem; padding: .75rem; color: #14303b; background: #ffffff; border: 1px solid #b9d1cc; box-shadow: 0 8px 20px rgba(20, 48, 59, .12); }
 
 .setup-card {
@@ -290,6 +292,15 @@ button:focus-visible {
 
 .estimate-count {
   margin-top: 1.4rem;
+}
+
+/* A concise boundary reminder builds trust without interrupting forecast work. */
+.product-note {
+  max-width: 50rem;
+  margin: 1.5rem 0 0;
+  color: #55777b;
+  font-size: .86rem;
+  line-height: 1.5;
 }
 
 .estimate-list {

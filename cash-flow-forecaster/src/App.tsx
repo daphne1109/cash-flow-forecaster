@@ -46,6 +46,7 @@ function App() {
           <button className="button-primary" type="button" onClick={() => setIsSettingUp(true)}>Build my first forecast</button>
           <button className="button-quiet" type="button" onClick={loadDemo}>Load demo data</button>
         </div>
+        <p className="product-note">Stored only in this browser. Cashflow is a planning tool, not financial advice.</p>
       </section>
     </main>
   )
