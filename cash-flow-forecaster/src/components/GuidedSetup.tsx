@@ -9,6 +9,7 @@ import type {
 } from '../domain/types'
 import { createEstimatedItem } from '../guided/createEstimatedItem'
 import { billCategories } from '../guided/billCategories'
+import { dailyLivingCategories } from '../guided/dailyLivingCategories'
 import { subscriptionCategories } from '../guided/subscriptionCategories'
 import type { PersistedPlan } from '../storage/forecastStore'
 
@@ -26,7 +27,7 @@ interface PromptDefinition {
   hint: string
   allowsMultiple: boolean
   addActionLabel: string
-  kind: 'single' | 'bills' | 'subscriptions'
+  kind: 'single' | 'bills' | 'daily-living' | 'subscriptions'
 }
 
 const prompts: readonly PromptDefinition[] = [
@@ -62,6 +63,17 @@ const prompts: readonly PromptDefinition[] = [
     allowsMultiple: false,
     addActionLabel: 'Add estimate and continue',
     kind: 'single',
+  },
+  {
+    title: 'Where does your day-to-day spending usually go?',
+    description: 'Choose every pattern that sounds familiar. Estimate one usual spend, not a whole month.',
+    defaultName: '',
+    type: 'expense',
+    recurrences: ['weekly', 'biweekly', 'monthly'],
+    hint: 'Meals, coffee, outings, and small routines can add up before you notice.',
+    allowsMultiple: true,
+    addActionLabel: '',
+    kind: 'daily-living',
   },
   {
     title: 'Which bills sound familiar?',
@@ -117,6 +129,8 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
   const [error, setError] = useState<string | null>(null)
   const [selectedBillIds, setSelectedBillIds] = useState<string[]>([])
   const [billAnswers, setBillAnswers] = useState<Record<string, BillAnswer>>({})
+  const [selectedDailyLivingIds, setSelectedDailyLivingIds] = useState<string[]>([])
+  const [dailyLivingAnswers, setDailyLivingAnswers] = useState<Record<string, DailyLivingAnswer>>({})
   const [selectedSubscriptionIds, setSelectedSubscriptionIds] = useState<string[]>([])
   const [subscriptionAnswers, setSubscriptionAnswers] = useState<Record<string, BillAnswer>>({})
 
@@ -160,6 +174,8 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     setRecurrence(nextPrompt.recurrences[0])
     setSelectedBillIds([])
     setBillAnswers({})
+    setSelectedDailyLivingIds([])
+    setDailyLivingAnswers({})
     setSelectedSubscriptionIds([])
     setSubscriptionAnswers({})
     setError(null)
@@ -247,6 +263,46 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     }))
   }
 
+  /** Selects a variable-spending routine and starts an editable local draft. */
+  function toggleDailyLivingCategory(categoryId: string) {
+    const category = dailyLivingCategories.find((candidate) => candidate.id === categoryId)
+    if (!category) {
+      return
+    }
+
+    if (selectedDailyLivingIds.includes(categoryId)) {
+      setSelectedDailyLivingIds((currentIds) => currentIds.filter((id) => id !== categoryId))
+      setDailyLivingAnswers((currentAnswers) => {
+        const { [categoryId]: _, ...remainingAnswers } = currentAnswers
+        return remainingAnswers
+      })
+      return
+    }
+
+    setSelectedDailyLivingIds((currentIds) => [...currentIds, categoryId])
+    setDailyLivingAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [categoryId]: {
+        name: category.defaultName,
+        amount: '',
+        firstDate: settings?.startDate ?? startDate,
+        recurrence: category.recurrences[0],
+      },
+    }))
+  }
+
+  /** Updates one field of a selected day-to-day spending estimate. */
+  function updateDailyLivingAnswer(
+    categoryId: string,
+    field: keyof DailyLivingAnswer,
+    value: string,
+  ) {
+    setDailyLivingAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [categoryId]: { ...currentAnswers[categoryId]!, [field]: value },
+    }))
+  }
+
   /** Mirrors bill selection for optional recurring services. */
   function toggleSubscriptionCategory(categoryId: string) {
     const category = subscriptionCategories.find((candidate) => candidate.id === categoryId)
@@ -320,6 +376,45 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     }
 
     const updatedItems = [...items, ...billItems]
+    setItems(updatedItems)
+    moveToPrompt(step + 1, updatedItems)
+  }
+
+  /** Adds selected routine expenses as separate, auditable forecast items. */
+  function addDailyLivingAndContinue() {
+    if (selectedDailyLivingIds.length === 0) {
+      moveToPrompt(step + 1)
+      return
+    }
+
+    const livingItems: ForecastItem[] = []
+    for (const categoryId of selectedDailyLivingIds) {
+      const answer = dailyLivingAnswers[categoryId]
+      const amountCents = answer ? parseMoneyToCents(answer.amount) : null
+
+      if (
+        answer === undefined ||
+        amountCents === null ||
+        answer.name.trim() === '' ||
+        !isValidDateKey(answer.firstDate)
+      ) {
+        setError('Add a name, typical amount, frequency, and date for every selected spending pattern.')
+        return
+      }
+
+      livingItems.push(
+        createEstimatedItem({
+          id: crypto.randomUUID(),
+          name: answer.name.trim(),
+          type: 'expense',
+          amountCents,
+          firstOccurrenceDate: answer.firstDate,
+          recurrence: answer.recurrence,
+        }),
+      )
+    }
+
+    const updatedItems = [...items, ...livingItems]
     setItems(updatedItems)
     moveToPrompt(step + 1, updatedItems)
   }
@@ -462,6 +557,78 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
         <div className="form-actions">
           <button className="button-primary" type="button" onClick={addBillsAndContinue}>
             {selectedBillIds.length === 0 ? 'Skip for now' : 'Add selected bills and continue'}
+          </button>
+          <button className="button-quiet" type="button" onClick={goBack}>
+            Back
+          </button>
+        </div>
+      </section>
+    )
+  }
+
+  if (prompt.kind === 'daily-living') {
+    return (
+      <section className="setup-card" aria-labelledby="guided-prompt-title">
+        <p className="step-label">Money check-in · {step + 1} of {prompts.length}</p>
+        <div className="progress-rail" aria-label={`Step ${step + 1} of ${prompts.length}`}>
+          {prompts.map((_, index) => (
+            <span className={index <= step ? 'rail-dot rail-dot-active' : 'rail-dot'} key={index} />
+          ))}
+        </div>
+        <h2 id="guided-prompt-title">{prompt.title}</h2>
+        <p className="support-copy">{prompt.description}</p>
+        <p className="prompt-hint">{prompt.hint}</p>
+        <div className="category-grid" aria-label="Day-to-day spending categories">
+          {dailyLivingCategories.map((category) => {
+            const isSelected = selectedDailyLivingIds.includes(category.id)
+            return (
+              <button
+                aria-pressed={isSelected}
+                className={isSelected ? 'category-choice category-choice-selected' : 'category-choice'}
+                key={category.id}
+                onClick={() => toggleDailyLivingCategory(category.id)}
+                type="button"
+              >
+                {category.label}
+              </button>
+            )
+          })}
+        </div>
+        {selectedDailyLivingIds.length > 0 && (
+          <div className="bill-answer-list">
+            <p className="selected-heading">Add a typical spend and cadence for each pattern</p>
+            {selectedDailyLivingIds.map((categoryId) => {
+              const answer = dailyLivingAnswers[categoryId]!
+              const category = dailyLivingCategories.find((candidate) => candidate.id === categoryId)!
+              return (
+                <div className="living-answer" key={categoryId}>
+                  <label>
+                    Spending type
+                    <input value={answer.name} onChange={(event) => updateDailyLivingAnswer(categoryId, 'name', event.target.value)} />
+                  </label>
+                  <label>
+                    Typical spend
+                    <input inputMode="decimal" value={answer.amount} onChange={(event) => updateDailyLivingAnswer(categoryId, 'amount', event.target.value)} placeholder="RM 0.00" />
+                  </label>
+                  <label>
+                    How often?
+                    <select value={answer.recurrence} onChange={(event) => updateDailyLivingAnswer(categoryId, 'recurrence', event.target.value)}>
+                      {category.recurrences.map((option) => <option key={option} value={option}>{recurrenceLabel(option)}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Next likely date
+                    <input type="date" value={answer.firstDate} onChange={(event) => updateDailyLivingAnswer(categoryId, 'firstDate', event.target.value)} />
+                  </label>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="form-actions">
+          <button className="button-primary" type="button" onClick={addDailyLivingAndContinue}>
+            {selectedDailyLivingIds.length === 0 ? 'Skip for now' : 'Add selected spending patterns and continue'}
           </button>
           <button className="button-quiet" type="button" onClick={goBack}>
             Back
@@ -617,6 +784,11 @@ interface BillAnswer {
   name: string
   amount: string
   firstDate: string
+}
+
+/** Draft data for a routine expense with a user-selected cadence. */
+interface DailyLivingAnswer extends BillAnswer {
+  recurrence: Recurrence
 }
 
 function todayDateKey(): string {

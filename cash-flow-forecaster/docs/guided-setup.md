@@ -15,14 +15,18 @@ editable in later UI steps.
 2. Income
 3. Groceries
 4. Petrol or transport
-5. One or more regular bills
-6. One or more subscriptions
-7. One other expected cost
+5. One or more day-to-day spending patterns
+6. One or more regular bills
+7. One or more subscriptions
+8. One other expected cost
 
-The grocery and transport prompts expose weekly and biweekly recurrence. Bills
-and subscriptions are limited to monthly recurrence, while the final expected
-cost can be one-off, monthly, or yearly. These are intentionally constrained
-to the recurrence rules the domain engine can calculate and test.
+The grocery and transport prompts expose weekly and biweekly recurrence. The
+day-to-day question recognises common variable routines - eating out, coffee,
+food delivery, outings, shopping, personal care, gym/sports, hobbies, and an
+other cost - and asks for a typical spend per occasion plus a realistic cadence.
+Bills and subscriptions are limited to monthly recurrence, while the final
+expected cost can be one-off, monthly, or yearly. These are intentionally
+constrained to the recurrence rules the domain engine can calculate and test.
 
 Every guided prompt has a Back control. A user who accidentally selects `Skip
 for now` can return to the immediately preceding question without restarting
@@ -41,3 +45,9 @@ Google One, OneDrive, Dropbox, ChatGPT, Canva, Notion, Figma, Goodnotes,
 Notability, Duolingo, Hostinger, GitHub, and an other-subscription option.
 Selecting a service only opens its editable amount/date row; it never assumes a
 price or creates a charge without the user's confirmation.
+
+The day-to-day prompt follows the same recognition-first principle. It does not
+ask the user to reconstruct every transaction or guess a monthly total. Each
+selected routine becomes its own forecast item, preserving a clear explanation
+of why repeated meals, coffee, outings, or other lifestyle spending affects the
+30-day balance.
