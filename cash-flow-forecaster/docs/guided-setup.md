@@ -15,11 +15,17 @@ editable in later UI steps.
 2. Income
 3. Groceries
 4. Petrol or transport
-5. One regular bill
-6. One subscription
+5. One or more regular bills
+6. One or more subscriptions
 7. One other expected cost
 
 The grocery and transport prompts expose weekly and biweekly recurrence. Bills
 and subscriptions are limited to monthly recurrence, while the final expected
 cost can be one-off, monthly, or yearly. These are intentionally constrained
 to the recurrence rules the domain engine can calculate and test.
+
+The bill and subscription questions are repeatable mini-lists. After adding an
+answer, the form clears while the saved item count remains visible; the user
+selects `Continue when finished` only after entering as many relevant items as
+they want. Each one remains a separate estimate so the eventual ledger can
+explain its individual effect on the forecast.

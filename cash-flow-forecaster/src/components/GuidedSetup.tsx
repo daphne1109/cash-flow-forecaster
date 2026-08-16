@@ -22,6 +22,8 @@ interface PromptDefinition {
   type: ItemType
   recurrences: readonly Recurrence[]
   hint: string
+  allowsMultiple: boolean
+  addActionLabel: string
 }
 
 const prompts: readonly PromptDefinition[] = [
@@ -32,6 +34,8 @@ const prompts: readonly PromptDefinition[] = [
     type: 'income',
     recurrences: ['monthly', 'weekly'],
     hint: 'For example, salary, allowance, or freelance income.',
+    allowsMultiple: false,
+    addActionLabel: 'Add estimate and continue',
   },
   {
     title: 'How often do you buy groceries?',
@@ -40,6 +44,8 @@ const prompts: readonly PromptDefinition[] = [
     type: 'expense',
     recurrences: ['weekly', 'biweekly'],
     hint: 'Use the amount you usually spend on one trip.',
+    allowsMultiple: false,
+    addActionLabel: 'Add estimate and continue',
   },
   {
     title: 'Do you regularly pay for petrol or transport?',
@@ -48,6 +54,8 @@ const prompts: readonly PromptDefinition[] = [
     type: 'expense',
     recurrences: ['weekly', 'biweekly'],
     hint: 'You can rename this to Transport if that fits better.',
+    allowsMultiple: false,
+    addActionLabel: 'Add estimate and continue',
   },
   {
     title: 'Do you have a regular bill?',
@@ -56,6 +64,8 @@ const prompts: readonly PromptDefinition[] = [
     type: 'expense',
     recurrences: ['monthly'],
     hint: 'Choose the next bill you are most likely to forget.',
+    allowsMultiple: true,
+    addActionLabel: 'Add bill',
   },
   {
     title: 'Any subscriptions you pay for?',
@@ -64,6 +74,8 @@ const prompts: readonly PromptDefinition[] = [
     type: 'expense',
     recurrences: ['monthly'],
     hint: 'Examples: YouTube Premium, iCloud, OneDrive, Duolingo, or Goodnotes.',
+    allowsMultiple: true,
+    addActionLabel: 'Add subscription',
   },
   {
     title: 'Anything else expected in the next 30 days?',
@@ -72,6 +84,8 @@ const prompts: readonly PromptDefinition[] = [
     type: 'expense',
     recurrences: ['once', 'monthly', 'yearly'],
     hint: 'You can skip this if nothing comes to mind.',
+    allowsMultiple: false,
+    addActionLabel: 'Add estimate and continue',
   },
 ]
 
@@ -128,7 +142,7 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     setError(null)
   }
 
-  function addEstimateAndContinue() {
+  function addEstimate(shouldContinue: boolean) {
     if (prompt === null) {
       return
     }
@@ -154,7 +168,17 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     const updatedItems = [...items, estimatedItem]
 
     setItems(updatedItems)
-    moveToPrompt(step + 1, updatedItems)
+    if (shouldContinue) {
+      moveToPrompt(step + 1, updatedItems)
+      return
+    }
+
+    // Repeatable prompts reset only their local answer fields. Previously added
+    // bills/subscriptions stay in the plan and remain visible in the counter.
+    setName('')
+    setAmount('')
+    setFirstDate(settings?.startDate ?? startDate)
+    setError(null)
   }
 
   if (step === -1) {
@@ -245,12 +269,25 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="form-actions">
-        <button className="button-primary" type="button" onClick={addEstimateAndContinue}>
-          Add estimate and continue
-        </button>
-        <button className="button-quiet" type="button" onClick={() => moveToPrompt(step + 1)}>
-          Skip for now
-        </button>
+        {prompt.allowsMultiple ? (
+          <>
+            <button className="button-primary" type="button" onClick={() => addEstimate(false)}>
+              {prompt.addActionLabel}
+            </button>
+            <button className="button-quiet" type="button" onClick={() => moveToPrompt(step + 1)}>
+              Continue when finished
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="button-primary" type="button" onClick={() => addEstimate(true)}>
+              {prompt.addActionLabel}
+            </button>
+            <button className="button-quiet" type="button" onClick={() => moveToPrompt(step + 1)}>
+              Skip for now
+            </button>
+          </>
+        )}
       </div>
       {items.length > 0 && (
         <p className="estimate-count">{items.length} estimated item{items.length === 1 ? '' : 's'} added so far</p>
