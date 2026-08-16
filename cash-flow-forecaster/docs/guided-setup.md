@@ -24,8 +24,13 @@ and subscriptions are limited to monthly recurrence, while the final expected
 cost can be one-off, monthly, or yearly. These are intentionally constrained
 to the recurrence rules the domain engine can calculate and test.
 
-The bill and subscription questions are repeatable mini-lists. After adding an
-answer, the form clears while the saved item count remains visible; the user
-selects `Continue when finished` only after entering as many relevant items as
-they want. Each one remains a separate estimate so the eventual ledger can
-explain its individual effect on the forecast.
+The bill question is recognition-first: users select multiple familiar category
+chips - rent/room, utilities, phone/internet, insurance, education, health,
+loan/credit, or other - then fill in the amount and next payment date for each
+selection. No category adds a charge automatically. Every submitted category
+becomes a separate monthly estimate so the eventual ledger can explain its
+individual effect on the forecast.
+
+Subscriptions remain a repeatable mini-list. After adding an answer, the form
+clears while the saved item count remains visible; the user selects `Continue
+when finished` only after entering as many relevant items as they want.

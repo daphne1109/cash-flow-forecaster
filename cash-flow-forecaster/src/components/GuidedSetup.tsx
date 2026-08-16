@@ -8,6 +8,7 @@ import type {
   Recurrence,
 } from '../domain/types'
 import { createEstimatedItem } from '../guided/createEstimatedItem'
+import { billCategories } from '../guided/billCategories'
 import type { PersistedPlan } from '../storage/forecastStore'
 
 interface GuidedSetupProps {
@@ -24,6 +25,7 @@ interface PromptDefinition {
   hint: string
   allowsMultiple: boolean
   addActionLabel: string
+  kind: 'single' | 'bills'
 }
 
 const prompts: readonly PromptDefinition[] = [
@@ -36,6 +38,7 @@ const prompts: readonly PromptDefinition[] = [
     hint: 'For example, salary, allowance, or freelance income.',
     allowsMultiple: false,
     addActionLabel: 'Add estimate and continue',
+    kind: 'single',
   },
   {
     title: 'How often do you buy groceries?',
@@ -46,6 +49,7 @@ const prompts: readonly PromptDefinition[] = [
     hint: 'Use the amount you usually spend on one trip.',
     allowsMultiple: false,
     addActionLabel: 'Add estimate and continue',
+    kind: 'single',
   },
   {
     title: 'Do you regularly pay for petrol or transport?',
@@ -56,16 +60,18 @@ const prompts: readonly PromptDefinition[] = [
     hint: 'You can rename this to Transport if that fits better.',
     allowsMultiple: false,
     addActionLabel: 'Add estimate and continue',
+    kind: 'single',
   },
   {
-    title: 'Do you have a regular bill?',
-    description: 'Think about rent, electricity, water, phone, or internet.',
-    defaultName: 'Electricity bill',
+    title: 'Which bills sound familiar?',
+    description: 'Choose every category you pay for. You can select more than one.',
+    defaultName: '',
     type: 'expense',
     recurrences: ['monthly'],
     hint: 'Choose the next bill you are most likely to forget.',
     allowsMultiple: true,
     addActionLabel: 'Add bill',
+    kind: 'bills',
   },
   {
     title: 'Any subscriptions you pay for?',
@@ -76,6 +82,7 @@ const prompts: readonly PromptDefinition[] = [
     hint: 'Examples: YouTube Premium, iCloud, OneDrive, Duolingo, or Goodnotes.',
     allowsMultiple: true,
     addActionLabel: 'Add subscription',
+    kind: 'single',
   },
   {
     title: 'Anything else expected in the next 30 days?',
@@ -86,6 +93,7 @@ const prompts: readonly PromptDefinition[] = [
     hint: 'You can skip this if nothing comes to mind.',
     allowsMultiple: false,
     addActionLabel: 'Add estimate and continue',
+    kind: 'single',
   },
 ]
 
@@ -106,6 +114,8 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     prompts[0].recurrences[0],
   )
   const [error, setError] = useState<string | null>(null)
+  const [selectedBillIds, setSelectedBillIds] = useState<string[]>([])
+  const [billAnswers, setBillAnswers] = useState<Record<string, BillAnswer>>({})
 
   const prompt = step >= 0 ? prompts[step] : null
 
@@ -139,6 +149,8 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     setAmount('')
     setFirstDate(settings?.startDate ?? startDate)
     setRecurrence(nextPrompt.recurrences[0])
+    setSelectedBillIds([])
+    setBillAnswers({})
     setError(null)
   }
 
@@ -179,6 +191,83 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     setAmount('')
     setFirstDate(settings?.startDate ?? startDate)
     setError(null)
+  }
+
+  /** Selects a recognised bill category and creates a local draft for it. */
+  function toggleBillCategory(categoryId: string) {
+    const category = billCategories.find((candidate) => candidate.id === categoryId)
+    if (!category) {
+      return
+    }
+
+    if (selectedBillIds.includes(categoryId)) {
+      setSelectedBillIds((currentIds) => currentIds.filter((id) => id !== categoryId))
+      setBillAnswers((currentAnswers) => {
+        const { [categoryId]: _, ...remainingAnswers } = currentAnswers
+        return remainingAnswers
+      })
+      return
+    }
+
+    setSelectedBillIds((currentIds) => [...currentIds, categoryId])
+    setBillAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [categoryId]: {
+        name: category.defaultName,
+        amount: '',
+        firstDate: settings?.startDate ?? startDate,
+      },
+    }))
+  }
+
+  function updateBillAnswer(
+    categoryId: string,
+    field: keyof BillAnswer,
+    value: string,
+  ) {
+    setBillAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [categoryId]: { ...currentAnswers[categoryId]!, [field]: value },
+    }))
+  }
+
+  /** Validates all selected bills as a batch, then adds distinct source items. */
+  function addBillsAndContinue() {
+    if (selectedBillIds.length === 0) {
+      moveToPrompt(step + 1)
+      return
+    }
+
+    const billItems: ForecastItem[] = []
+    for (const categoryId of selectedBillIds) {
+      const answer = billAnswers[categoryId]
+      const amountCents = answer ? parseMoneyToCents(answer.amount) : null
+
+      if (
+        answer === undefined ||
+        amountCents === null ||
+        answer.name.trim() === '' ||
+        !isValidDateKey(answer.firstDate)
+      ) {
+        setError('Add a name, amount, and next payment date for every selected bill.')
+        return
+      }
+
+      billItems.push(
+        createEstimatedItem({
+          id: crypto.randomUUID(),
+          name: answer.name.trim(),
+          type: 'expense',
+          amountCents,
+          firstOccurrenceDate: answer.firstDate,
+          recurrence: 'monthly',
+        }),
+      )
+    }
+
+    const updatedItems = [...items, ...billItems]
+    setItems(updatedItems)
+    moveToPrompt(step + 1, updatedItems)
   }
 
   if (step === -1) {
@@ -223,6 +312,67 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
 
   if (prompt === null) {
     return null
+  }
+
+  if (prompt.kind === 'bills') {
+    return (
+      <section className="setup-card" aria-labelledby="guided-prompt-title">
+        <p className="step-label">Money check-in · {step + 1} of {prompts.length}</p>
+        <div className="progress-rail" aria-label={`Step ${step + 1} of ${prompts.length}`}>
+          {prompts.map((_, index) => (
+            <span className={index <= step ? 'rail-dot rail-dot-active' : 'rail-dot'} key={index} />
+          ))}
+        </div>
+        <h2 id="guided-prompt-title">{prompt.title}</h2>
+        <p className="support-copy">{prompt.description}</p>
+        <div className="category-grid" aria-label="Bill categories">
+          {billCategories.map((category) => {
+            const isSelected = selectedBillIds.includes(category.id)
+            return (
+              <button
+                aria-pressed={isSelected}
+                className={isSelected ? 'category-choice category-choice-selected' : 'category-choice'}
+                key={category.id}
+                onClick={() => toggleBillCategory(category.id)}
+                type="button"
+              >
+                {category.label}
+              </button>
+            )
+          })}
+        </div>
+        {selectedBillIds.length > 0 && (
+          <div className="bill-answer-list">
+            <p className="selected-heading">Add what you remember for each selected bill</p>
+            {selectedBillIds.map((categoryId) => {
+              const answer = billAnswers[categoryId]!
+              return (
+                <div className="bill-answer" key={categoryId}>
+                  <label>
+                    Bill name
+                    <input value={answer.name} onChange={(event) => updateBillAnswer(categoryId, 'name', event.target.value)} />
+                  </label>
+                  <label>
+                    Typical amount
+                    <input inputMode="decimal" value={answer.amount} onChange={(event) => updateBillAnswer(categoryId, 'amount', event.target.value)} placeholder="RM 0.00" />
+                  </label>
+                  <label>
+                    Next payment date
+                    <input type="date" value={answer.firstDate} onChange={(event) => updateBillAnswer(categoryId, 'firstDate', event.target.value)} />
+                  </label>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="form-actions">
+          <button className="button-primary" type="button" onClick={addBillsAndContinue}>
+            {selectedBillIds.length === 0 ? 'Skip for now' : 'Add selected bills and continue'}
+          </button>
+        </div>
+      </section>
+    )
   }
 
   return (
@@ -294,6 +444,12 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
       )}
     </section>
   )
+}
+
+interface BillAnswer {
+  name: string
+  amount: string
+  firstDate: string
 }
 
 function todayDateKey(): string {

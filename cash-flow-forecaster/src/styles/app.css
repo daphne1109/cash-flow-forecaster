@@ -86,6 +86,57 @@ p:not(.eyebrow) {
   font-size: 0.9rem;
 }
 
+/* Recognition-first choices make it easier to remember recurring bills than a
+   blank text field. They use native buttons so selection remains keyboardable. */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+}
+
+.category-choice {
+  min-height: 3.5rem;
+  padding: 0.6rem;
+  color: #28565d;
+  background: #f7fbfa;
+  border: 1px solid #bfd6d2;
+  border-radius: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.category-choice:hover {
+  background: #e8f4f1;
+}
+
+.category-choice-selected {
+  color: #ffffff;
+  background: #14766e;
+  border-color: #14766e;
+}
+
+.bill-answer-list {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1.5rem;
+}
+
+.selected-heading {
+  margin: 0;
+  color: #2d5c61;
+  font-weight: 700;
+}
+
+.bill-answer {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.1fr;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  background: #f7fbfa;
+  border-left: 3px solid #63bcae;
+}
+
 .step-label {
   margin: 0 0 0.65rem;
   font-weight: 700;
@@ -221,6 +272,11 @@ button:focus-visible {
   }
 
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-grid,
+  .bill-answer {
     grid-template-columns: 1fr;
   }
 }
