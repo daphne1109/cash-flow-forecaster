@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { parseDateKey } from '../domain/date'
 import { generateForecast } from '../domain/forecast'
@@ -106,6 +106,19 @@ function ItemEditor({ item, onCancel, onSave }: ItemEditorProps) {
   const [recurrence, setRecurrence] = useState<Recurrence>(item?.recurrence ?? 'once')
   const [customIntervalDays, setCustomIntervalDays] = useState(item?.customIntervalDays ? String(item.customIntervalDays) : '3')
   const [error, setError] = useState<string | null>(null)
+
+  // Escape gives keyboard users the same quick exit as the visible close action.
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onCancel()
+      }
+    }
+
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onCancel])
+
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const amountCents = parseMoneyToCents(amount)
@@ -116,15 +129,21 @@ function ItemEditor({ item, onCancel, onSave }: ItemEditorProps) {
     if (!validation.isValid) { setError(validation.errors[0] ?? 'Check this item and try again.'); return }
     onSave(next)
   }
-  return <section className="editor-panel" aria-labelledby="item-editor-title"><div className="panel-heading"><div><p className="step-label">Forecast input</p><h2 id="item-editor-title">{item ? `Edit ${item.name}` : 'Add scheduled item'}</h2></div></div><form className="form-grid" onSubmit={submit}>
-    <label>Name<input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Gym membership" /></label>
+  return <div className="editor-backdrop" onMouseDown={(event) => { if (event.currentTarget === event.target) onCancel() }}>
+    <section aria-describedby="item-editor-description" aria-labelledby="item-editor-title" aria-modal="true" className="editor-panel editor-modal" role="dialog">
+      <div className="panel-heading"><div><p className="step-label">Forecast input</p><h2 id="item-editor-title">{item ? `Edit ${item.name}` : 'Add scheduled item'}</h2></div><button aria-label="Close editor" className="editor-close" type="button" onClick={onCancel}>×</button></div>
+      <p className="editor-description" id="item-editor-description">Update the schedule, then save to recalculate your forecast.</p>
+      <form className="form-grid" onSubmit={submit}>
+    <label>Name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Gym membership" /></label>
     <label>Type<select value={type} onChange={(event) => setType(event.target.value as ForecastItem['type'])}><option value="expense">Expense</option><option value="income">Income</option></select></label>
     <label>Amount<input value={amount} inputMode="decimal" onChange={(event) => setAmount(event.target.value)} placeholder="RM 0.00" /></label>
     <label>First date<input type="date" value={firstDate} onChange={(event) => setFirstDate(event.target.value)} /></label>
     <label>Recurrence<select value={recurrence} onChange={(event) => setRecurrence(event.target.value as Recurrence)}>{(['once', 'daily', 'weekly', 'biweekly', 'monthly', 'yearly', 'custom'] as const).map((value) => <option value={value} key={value}>{recurrenceLabel(value)}</option>)}</select></label>
     {recurrence === 'custom' && <label>Every how many days?<input inputMode="numeric" value={customIntervalDays} onChange={(event) => setCustomIntervalDays(event.target.value)} placeholder="e.g. 3" /></label>}
     <div className="form-actions editor-actions"><button className="button-primary" type="submit">Save item</button><button className="button-quiet" type="button" onClick={onCancel}>Cancel</button></div>
-  </form>{error && <p className="form-error" role="alert">{error}</p>}</section>
+      </form>{error && <p className="form-error" role="alert">{error}</p>}
+    </section>
+  </div>
 }
 
 function BalanceTooltip({ active, payload }: { active?: boolean; payload?: ReadonlyArray<{ payload?: { date: string; balance: number; net: number } }> }) {

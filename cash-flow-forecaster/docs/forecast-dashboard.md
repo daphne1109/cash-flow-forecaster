@@ -9,6 +9,11 @@ Users can add manual items, correct guided estimates, or remove an item. Every
 change replaces the source plan, saves it through local storage, and triggers a
 fresh calculation. The dashboard never edits derived daily rows directly.
 
+Adding or editing a scheduled item opens a focused modal dialog, so the item
+list does not shift or disappear while the user is reviewing an existing plan.
+The dialog has a labelled close control, supports Escape, and closes when its
+backdrop is selected.
+
 The low-balance row and first-shortfall row include text badges as well as
 colour treatment, so a risk state does not rely on colour alone. The dashboard
 also states the prototype boundary: data is stored only in the current browser
