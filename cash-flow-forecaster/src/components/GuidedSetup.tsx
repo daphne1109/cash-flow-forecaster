@@ -137,6 +137,12 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
   }
 
   function moveToPrompt(nextStep: number, completedItems = items) {
+    if (nextStep < 0) {
+      setStep(-1)
+      setError(null)
+      return
+    }
+
     if (nextStep >= prompts.length) {
       if (settings === null) {
         return
@@ -157,6 +163,11 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     setSelectedSubscriptionIds([])
     setSubscriptionAnswers({})
     setError(null)
+  }
+
+  /** Returns to the preceding prompt without discarding already-added items. */
+  function goBack() {
+    moveToPrompt(step - 1)
   }
 
   function addEstimate(shouldContinue: boolean) {
@@ -452,6 +463,9 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
           <button className="button-primary" type="button" onClick={addBillsAndContinue}>
             {selectedBillIds.length === 0 ? 'Skip for now' : 'Add selected bills and continue'}
           </button>
+          <button className="button-quiet" type="button" onClick={goBack}>
+            Back
+          </button>
         </div>
       </section>
     )
@@ -514,6 +528,9 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
           <button className="button-primary" type="button" onClick={addSubscriptionsAndContinue}>
             {selectedSubscriptionIds.length === 0 ? 'Skip for now' : 'Add selected subscriptions and continue'}
           </button>
+          <button className="button-quiet" type="button" onClick={goBack}>
+            Back
+          </button>
         </div>
       </section>
     )
@@ -571,6 +588,9 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
             <button className="button-quiet" type="button" onClick={() => moveToPrompt(step + 1)}>
               Continue when finished
             </button>
+            <button className="button-quiet" type="button" onClick={goBack}>
+              Back
+            </button>
           </>
         ) : (
           <>
@@ -579,6 +599,9 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
             </button>
             <button className="button-quiet" type="button" onClick={() => moveToPrompt(step + 1)}>
               Skip for now
+            </button>
+            <button className="button-quiet" type="button" onClick={goBack}>
+              Back
             </button>
           </>
         )}

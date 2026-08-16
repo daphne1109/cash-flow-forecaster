@@ -38,6 +38,43 @@ select {
   max-width: 38rem;
 }
 
+/* The dashboard is a ledger-first view: summary signals, then a visual trend,
+   then the transaction evidence needed to trust that trend. */
+.dashboard-shell { width: min(100%, 78rem); margin: 0 auto; padding: clamp(1.25rem, 4vw, 3.5rem) clamp(1rem, 3vw, 2rem) 4rem; }
+.dashboard-header, .panel-heading, .dashboard-item-list li, .item-actions, .insight-grid { display: flex; align-items: center; }
+.dashboard-header, .panel-heading { justify-content: space-between; gap: 1rem; }
+.dashboard-header h1 { max-width: 38rem; margin-top: .25rem; }
+.insight-grid { gap: 1rem; margin: 2rem 0 1rem; }
+.insight-card, .chart-panel, .items-panel, .ledger-panel, .editor-panel { background: #ffffff; border: 1px solid #c9ddd9; border-radius: 1rem; box-shadow: 0 14px 32px rgba(20, 48, 59, .06); }
+.insight-card { flex: 1; padding: 1.2rem; }
+.insight-card span, .chart-note, .dashboard-item-list span, .muted { color: #55777b; font-size: .86rem; }
+.insight-card strong { display: block; margin-top: .5rem; font-size: 1.5rem; }
+.insight-card p { margin: .4rem 0 0; }
+.insight-card-warning { border-color: #e2b6a9; background: #fff8f5; }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(19rem, .95fr); gap: 1rem; }
+.chart-panel, .items-panel, .ledger-panel, .editor-panel { padding: 1.3rem; }
+.forecast-chart { height: 19rem; margin-top: 1rem; }
+.chart-caption { margin: .5rem 0 0; color: #426d70; }
+.dashboard-item-list { padding: 0; margin: 1rem 0 0; list-style: none; }
+.dashboard-item-list li { justify-content: space-between; gap: .75rem; padding: .85rem 0; border-top: 1px solid #e1ece9; }
+.dashboard-item-list li > div:first-child { display: grid; gap: .2rem; }
+.item-actions { flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
+.item-actions button { padding: .25rem 0; color: #36666a; background: transparent; border: 0; text-decoration: underline; cursor: pointer; }
+.income-amount { color: #0f7355; }
+.expense-amount { color: #a4281e; }
+.empty-items { color: #55777b; }
+.editor-panel { margin-top: 1rem; }
+.editor-actions { align-self: end; margin-top: 0; }
+.ledger-panel { margin-top: 1rem; }
+.ledger-scroll { overflow-x: auto; margin-top: 1rem; }
+table { width: 100%; border-collapse: collapse; min-width: 43rem; font-size: .9rem; }
+th { color: #55777b; font-size: .78rem; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
+th, td { padding: .75rem .6rem; border-top: 1px solid #e1ece9; vertical-align: top; }
+.ledger-occurrence { display: block; margin-bottom: .2rem; }
+.ledger-lowest { background: #fff4f1; }
+.ledger-negative { background: #fffaf7; }
+.chart-tooltip { display: grid; gap: .25rem; padding: .75rem; color: #14303b; background: #ffffff; border: 1px solid #b9d1cc; box-shadow: 0 8px 20px rgba(20, 48, 59, .12); }
+
 .setup-card {
   width: min(100%, 44rem);
   padding: clamp(1.5rem, 5vw, 3rem);
@@ -279,4 +316,9 @@ button:focus-visible {
   .bill-answer {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 760px) {
+  .dashboard-header, .insight-grid { align-items: stretch; flex-direction: column; }
+  .dashboard-grid { grid-template-columns: 1fr; }
 }

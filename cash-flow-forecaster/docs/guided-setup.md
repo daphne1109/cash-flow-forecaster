@@ -24,6 +24,10 @@ and subscriptions are limited to monthly recurrence, while the final expected
 cost can be one-off, monthly, or yearly. These are intentionally constrained
 to the recurrence rules the domain engine can calculate and test.
 
+Every guided prompt has a Back control. A user who accidentally selects `Skip
+for now` can return to the immediately preceding question without restarting
+the flow or losing any previously added estimates.
+
 The bill question is recognition-first: users select multiple familiar category
 chips - rent/room, utilities, phone/internet, insurance, education, health,
 loan/credit, or other - then fill in the amount and next payment date for each
