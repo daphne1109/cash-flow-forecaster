@@ -79,6 +79,26 @@ describe('recurrence expansion', () => {
     expect(yearly.map((occurrence) => occurrence.date)).toEqual(['2026-08-20'])
   })
 
+  it('expands daily and backdated custom-day schedules inside the window', () => {
+    const daily = expandOccurrences(
+      createItem({ recurrence: 'daily', firstOccurrenceDate: '2026-08-01' }),
+      '2026-08-01',
+      '2026-08-04',
+    )
+    const custom = expandOccurrences(
+      createItem({ recurrence: 'custom', customIntervalDays: 3, firstOccurrenceDate: '2026-07-30' }),
+      '2026-08-01',
+      '2026-08-10',
+    )
+
+    expect(daily.map((occurrence) => occurrence.date)).toEqual([
+      '2026-08-01', '2026-08-02', '2026-08-03', '2026-08-04',
+    ])
+    expect(custom.map((occurrence) => occurrence.date)).toEqual([
+      '2026-08-02', '2026-08-05', '2026-08-08',
+    ])
+  })
+
   it('returns signed cents for income and expense items', () => {
     const expense = expandOccurrences(
       createItem({ amountCents: 1_234, recurrence: 'once' }),

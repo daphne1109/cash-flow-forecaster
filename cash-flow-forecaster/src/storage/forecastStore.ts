@@ -147,6 +147,10 @@ function toForecastItem(value: unknown): ForecastItem | null {
     return null
   }
 
+  if (value.customIntervalDays !== undefined && (!Number.isSafeInteger(value.customIntervalDays))) {
+    return null
+  }
+
   return {
     id: value.id,
     name: value.name,
@@ -154,6 +158,7 @@ function toForecastItem(value: unknown): ForecastItem | null {
     amountCents: value.amountCents,
     firstOccurrenceDate: value.firstOccurrenceDate,
     recurrence: value.recurrence,
+    customIntervalDays: value.customIntervalDays as number | undefined,
     source: value.source,
   }
 }

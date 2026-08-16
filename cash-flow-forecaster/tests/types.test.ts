@@ -67,6 +67,13 @@ describe('forecast item validation', () => {
     expect(monthly.errors).toContain('Monthly items must use days 1 through 28.')
     expect(yearly.errors).toContain('Yearly items cannot use February 29.')
   })
+
+  it('requires a bounded whole-day interval for custom recurrence', () => {
+    expect(validateForecastItem({ ...validItem, recurrence: 'custom' }).errors).toContain(
+      'Custom recurrence must repeat every 2 to 365 days.',
+    )
+    expect(validateForecastItem({ ...validItem, recurrence: 'custom', customIntervalDays: 3 }).isValid).toBe(true)
+  })
 })
 
 describe('forecast settings validation', () => {

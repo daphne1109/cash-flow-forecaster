@@ -36,7 +36,7 @@ const prompts: readonly PromptDefinition[] = [
     description: 'An approximate amount is enough. You can revise this later.',
     defaultName: 'Income',
     type: 'income',
-    recurrences: ['monthly', 'weekly'],
+    recurrences: ['monthly', 'weekly', 'daily', 'custom'],
     hint: 'For example, salary, allowance, or freelance income.',
     allowsMultiple: false,
     addActionLabel: 'Add estimate and continue',
@@ -47,7 +47,7 @@ const prompts: readonly PromptDefinition[] = [
     description: 'Think about one typical trip, not your whole month.',
     defaultName: 'Groceries',
     type: 'expense',
-    recurrences: ['weekly', 'biweekly'],
+    recurrences: ['weekly', 'biweekly', 'daily', 'monthly', 'custom'],
     hint: 'Use the amount you usually spend on one trip.',
     allowsMultiple: false,
     addActionLabel: 'Add estimate and continue',
@@ -58,7 +58,7 @@ const prompts: readonly PromptDefinition[] = [
     description: 'Add a typical top-up or trip if it is part of your routine.',
     defaultName: 'Petrol',
     type: 'expense',
-    recurrences: ['weekly', 'biweekly'],
+    recurrences: ['weekly', 'biweekly', 'daily', 'monthly', 'custom'],
     hint: 'You can rename this to Transport if that fits better.',
     allowsMultiple: false,
     addActionLabel: 'Add estimate and continue',
@@ -69,7 +69,7 @@ const prompts: readonly PromptDefinition[] = [
     description: 'Choose every pattern that sounds familiar. Estimate one usual spend, not a whole month.',
     defaultName: '',
     type: 'expense',
-    recurrences: ['weekly', 'biweekly', 'monthly'],
+    recurrences: ['weekly', 'biweekly', 'daily', 'monthly', 'custom'],
     hint: 'Meals, coffee, outings, and small routines can add up before you notice.',
     allowsMultiple: true,
     addActionLabel: '',
@@ -80,7 +80,7 @@ const prompts: readonly PromptDefinition[] = [
     description: 'Choose every category you pay for. You can select more than one.',
     defaultName: '',
     type: 'expense',
-    recurrences: ['monthly'],
+    recurrences: ['monthly', 'daily', 'custom'],
     hint: 'Choose the next bill you are most likely to forget.',
     allowsMultiple: true,
     addActionLabel: 'Add bill',
@@ -91,7 +91,7 @@ const prompts: readonly PromptDefinition[] = [
     description: 'Choose every service you pay for. Small repeat charges are easy to miss.',
     defaultName: '',
     type: 'expense',
-    recurrences: ['monthly'],
+    recurrences: ['monthly', 'daily', 'custom'],
     hint: 'Nothing is added until you enter the amount and next billing date.',
     allowsMultiple: false,
     addActionLabel: '',
@@ -102,13 +102,16 @@ const prompts: readonly PromptDefinition[] = [
     description: 'Add one cost you already know is coming, such as insurance or a trip.',
     defaultName: 'Expected cost',
     type: 'expense',
-    recurrences: ['once', 'monthly', 'yearly'],
+    recurrences: ['once', 'daily', 'monthly', 'yearly', 'custom'],
     hint: 'You can skip this if nothing comes to mind.',
     allowsMultiple: false,
     addActionLabel: 'Add estimate and continue',
     kind: 'single',
   },
 ]
+
+/** Shared recurring options for category prompts, which default to a likely cadence. */
+const recurringOptions: readonly Recurrence[] = ['daily', 'weekly', 'biweekly', 'monthly', 'yearly', 'custom']
 
 /**
  * Guides a user from everyday spending memories to editable source items.
@@ -126,13 +129,14 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
   const [recurrence, setRecurrence] = useState<Recurrence>(
     prompts[0].recurrences[0],
   )
+  const [customIntervalDays, setCustomIntervalDays] = useState('3')
   const [error, setError] = useState<string | null>(null)
   const [selectedBillIds, setSelectedBillIds] = useState<string[]>([])
-  const [billAnswers, setBillAnswers] = useState<Record<string, BillAnswer>>({})
+  const [billAnswers, setBillAnswers] = useState<Record<string, RecurringAnswer>>({})
   const [selectedDailyLivingIds, setSelectedDailyLivingIds] = useState<string[]>([])
   const [dailyLivingAnswers, setDailyLivingAnswers] = useState<Record<string, DailyLivingAnswer>>({})
   const [selectedSubscriptionIds, setSelectedSubscriptionIds] = useState<string[]>([])
-  const [subscriptionAnswers, setSubscriptionAnswers] = useState<Record<string, BillAnswer>>({})
+  const [subscriptionAnswers, setSubscriptionAnswers] = useState<Record<string, RecurringAnswer>>({})
 
   const prompt = step >= 0 ? prompts[step] : null
 
@@ -172,6 +176,7 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     setAmount('')
     setFirstDate(settings?.startDate ?? startDate)
     setRecurrence(nextPrompt.recurrences[0])
+    setCustomIntervalDays('3')
     setSelectedBillIds([])
     setBillAnswers({})
     setSelectedDailyLivingIds([])
@@ -192,10 +197,12 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
     }
 
     const amountCents = parseMoneyToCents(amount)
+    const customDays = parseCustomIntervalDays(customIntervalDays)
     if (
       amountCents === null ||
       name.trim() === '' ||
       !isValidDateKey(firstDate)
+      || (recurrence === 'custom' && customDays === null)
     ) {
       setError('Add a name, a positive amount, and a valid next payment date.')
       return
@@ -208,6 +215,7 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
       amountCents,
       firstOccurrenceDate: firstDate,
       recurrence,
+      customIntervalDays: recurrence === 'custom' ? customDays! : undefined,
     })
     const updatedItems = [...items, estimatedItem]
 
@@ -248,13 +256,15 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
         name: category.defaultName,
         amount: '',
         firstDate: settings?.startDate ?? startDate,
+        recurrence: 'monthly',
+        customIntervalDays: '3',
       },
     }))
   }
 
   function updateBillAnswer(
     categoryId: string,
-    field: keyof BillAnswer,
+    field: keyof RecurringAnswer,
     value: string,
   ) {
     setBillAnswers((currentAnswers) => ({
@@ -287,6 +297,7 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
         amount: '',
         firstDate: settings?.startDate ?? startDate,
         recurrence: category.recurrences[0],
+        customIntervalDays: '3',
       },
     }))
   }
@@ -326,13 +337,15 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
         name: category.defaultName,
         amount: '',
         firstDate: settings?.startDate ?? startDate,
+        recurrence: 'monthly',
+        customIntervalDays: '3',
       },
     }))
   }
 
   function updateSubscriptionAnswer(
     categoryId: string,
-    field: keyof BillAnswer,
+    field: keyof RecurringAnswer,
     value: string,
   ) {
     setSubscriptionAnswers((currentAnswers) => ({
@@ -357,9 +370,10 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
         answer === undefined ||
         amountCents === null ||
         answer.name.trim() === '' ||
-        !isValidDateKey(answer.firstDate)
+        !isValidDateKey(answer.firstDate) ||
+        (answer.recurrence === 'custom' && parseCustomIntervalDays(answer.customIntervalDays) === null)
       ) {
-        setError('Add a name, amount, and next payment date for every selected bill.')
+        setError('Add a name, amount, frequency, and next payment date for every selected bill.')
         return
       }
 
@@ -370,7 +384,8 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
           type: 'expense',
           amountCents,
           firstOccurrenceDate: answer.firstDate,
-          recurrence: 'monthly',
+          recurrence: answer.recurrence,
+          customIntervalDays: answer.recurrence === 'custom' ? parseCustomIntervalDays(answer.customIntervalDays)! : undefined,
         }),
       )
     }
@@ -396,7 +411,8 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
         answer === undefined ||
         amountCents === null ||
         answer.name.trim() === '' ||
-        !isValidDateKey(answer.firstDate)
+        !isValidDateKey(answer.firstDate) ||
+        (answer.recurrence === 'custom' && parseCustomIntervalDays(answer.customIntervalDays) === null)
       ) {
         setError('Add a name, typical amount, frequency, and date for every selected spending pattern.')
         return
@@ -410,6 +426,7 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
           amountCents,
           firstOccurrenceDate: answer.firstDate,
           recurrence: answer.recurrence,
+          customIntervalDays: answer.recurrence === 'custom' ? parseCustomIntervalDays(answer.customIntervalDays)! : undefined,
         }),
       )
     }
@@ -435,9 +452,10 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
         answer === undefined ||
         amountCents === null ||
         answer.name.trim() === '' ||
-        !isValidDateKey(answer.firstDate)
+        !isValidDateKey(answer.firstDate) ||
+        (answer.recurrence === 'custom' && parseCustomIntervalDays(answer.customIntervalDays) === null)
       ) {
-        setError('Add a name, amount, and next billing date for every selected subscription.')
+        setError('Add a name, amount, frequency, and next billing date for every selected subscription.')
         return
       }
 
@@ -448,7 +466,8 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
           type: 'expense',
           amountCents,
           firstOccurrenceDate: answer.firstDate,
-          recurrence: 'monthly',
+          recurrence: answer.recurrence,
+          customIntervalDays: answer.recurrence === 'custom' ? parseCustomIntervalDays(answer.customIntervalDays)! : undefined,
         }),
       )
     }
@@ -535,7 +554,7 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
             {selectedBillIds.map((categoryId) => {
               const answer = billAnswers[categoryId]!
               return (
-                <div className="bill-answer" key={categoryId}>
+                <div className="living-answer" key={categoryId}>
                   <label>
                     Bill name
                     <input value={answer.name} onChange={(event) => updateBillAnswer(categoryId, 'name', event.target.value)} />
@@ -545,9 +564,19 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
                     <input inputMode="decimal" value={answer.amount} onChange={(event) => updateBillAnswer(categoryId, 'amount', event.target.value)} placeholder="RM 0.00" />
                   </label>
                   <label>
+                    How often?
+                    <select value={answer.recurrence} onChange={(event) => updateBillAnswer(categoryId, 'recurrence', event.target.value)}>
+                      {recurringOptions.map((option) => <option key={option} value={option}>{recurrenceLabel(option)}</option>)}
+                    </select>
+                  </label>
+                  <label>
                     Next payment date
                     <input type="date" value={answer.firstDate} onChange={(event) => updateBillAnswer(categoryId, 'firstDate', event.target.value)} />
                   </label>
+                  {answer.recurrence === 'custom' && <label>
+                    Every how many days?
+                    <input inputMode="numeric" value={answer.customIntervalDays} onChange={(event) => updateBillAnswer(categoryId, 'customIntervalDays', event.target.value)} placeholder="e.g. 3" />
+                  </label>}
                 </div>
               )
             })}
@@ -599,7 +628,6 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
             <p className="selected-heading">Add a typical spend and cadence for each pattern</p>
             {selectedDailyLivingIds.map((categoryId) => {
               const answer = dailyLivingAnswers[categoryId]!
-              const category = dailyLivingCategories.find((candidate) => candidate.id === categoryId)!
               return (
                 <div className="living-answer" key={categoryId}>
                   <label>
@@ -613,13 +641,17 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
                   <label>
                     How often?
                     <select value={answer.recurrence} onChange={(event) => updateDailyLivingAnswer(categoryId, 'recurrence', event.target.value)}>
-                      {category.recurrences.map((option) => <option key={option} value={option}>{recurrenceLabel(option)}</option>)}
+                      {recurringOptions.map((option) => <option key={option} value={option}>{recurrenceLabel(option)}</option>)}
                     </select>
                   </label>
                   <label>
                     Next likely date
                     <input type="date" value={answer.firstDate} onChange={(event) => updateDailyLivingAnswer(categoryId, 'firstDate', event.target.value)} />
                   </label>
+                  {answer.recurrence === 'custom' && <label>
+                    Every how many days?
+                    <input inputMode="numeric" value={answer.customIntervalDays} onChange={(event) => updateDailyLivingAnswer(categoryId, 'customIntervalDays', event.target.value)} placeholder="e.g. 3" />
+                  </label>}
                 </div>
               )
             })}
@@ -672,7 +704,7 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
             {selectedSubscriptionIds.map((categoryId) => {
               const answer = subscriptionAnswers[categoryId]!
               return (
-                <div className="bill-answer" key={categoryId}>
+                <div className="living-answer" key={categoryId}>
                   <label>
                     Subscription name
                     <input value={answer.name} onChange={(event) => updateSubscriptionAnswer(categoryId, 'name', event.target.value)} />
@@ -682,9 +714,19 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
                     <input inputMode="decimal" value={answer.amount} onChange={(event) => updateSubscriptionAnswer(categoryId, 'amount', event.target.value)} placeholder="RM 0.00" />
                   </label>
                   <label>
+                    How often?
+                    <select value={answer.recurrence} onChange={(event) => updateSubscriptionAnswer(categoryId, 'recurrence', event.target.value)}>
+                      {recurringOptions.map((option) => <option key={option} value={option}>{recurrenceLabel(option)}</option>)}
+                    </select>
+                  </label>
+                  <label>
                     Next billing date
                     <input type="date" value={answer.firstDate} onChange={(event) => updateSubscriptionAnswer(categoryId, 'firstDate', event.target.value)} />
                   </label>
+                  {answer.recurrence === 'custom' && <label>
+                    Every how many days?
+                    <input inputMode="numeric" value={answer.customIntervalDays} onChange={(event) => updateSubscriptionAnswer(categoryId, 'customIntervalDays', event.target.value)} placeholder="e.g. 3" />
+                  </label>}
                 </div>
               )
             })}
@@ -744,6 +786,10 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
             ))}
           </select>
         </label>
+        {recurrence === 'custom' && <label>
+          Every how many days?
+          <input inputMode="numeric" value={customIntervalDays} onChange={(event) => setCustomIntervalDays(event.target.value)} placeholder="e.g. 3" />
+        </label>}
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="form-actions">
@@ -780,16 +826,17 @@ export function GuidedSetup({ onComplete, onCancel }: GuidedSetupProps) {
   )
 }
 
-interface BillAnswer {
+/** Shared editable fields for bills and subscriptions with a repeating schedule. */
+interface RecurringAnswer {
   name: string
   amount: string
   firstDate: string
+  recurrence: Recurrence
+  customIntervalDays: string
 }
 
 /** Draft data for a routine expense with a user-selected cadence. */
-interface DailyLivingAnswer extends BillAnswer {
-  recurrence: Recurrence
-}
+interface DailyLivingAnswer extends RecurringAnswer {}
 
 function todayDateKey(): string {
   const date = new Date()
@@ -801,7 +848,19 @@ function todayDateKey(): string {
 }
 
 function recurrenceLabel(recurrence: Recurrence): string {
-  return recurrence === 'biweekly'
+  return recurrence === 'custom'
+    ? 'Custom interval'
+    : recurrence === 'biweekly'
     ? 'Every 2 weeks'
     : recurrence[0].toUpperCase() + recurrence.slice(1)
+}
+
+/** Converts a custom day interval without permitting decimal or unsafe values. */
+function parseCustomIntervalDays(value: string): number | null {
+  if (!/^\d+$/.test(value)) {
+    return null
+  }
+
+  const days = Number(value)
+  return Number.isSafeInteger(days) && days >= 2 && days <= 365 ? days : null
 }

@@ -9,7 +9,7 @@ import { isValidDateKey } from './date'
 export type DateKey = string
 
 export type ItemType = 'income' | 'expense'
-export type Recurrence = 'once' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
+export type Recurrence = 'once' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'custom'
 export type ItemSource = 'guided-estimate' | 'manual'
 
 /** Source data supplied directly by the user or created from guided prompts. */
@@ -20,6 +20,8 @@ export interface ForecastItem {
   amountCents: number
   firstOccurrenceDate: DateKey
   recurrence: Recurrence
+  /** Required for custom recurrence; the number of days between occurrences. */
+  customIntervalDays?: number
   source: ItemSource
 }
 
@@ -62,10 +64,12 @@ export interface ValidationResult {
 const ITEM_TYPES: readonly ItemType[] = ['income', 'expense']
 const RECURRENCES: readonly Recurrence[] = [
   'once',
+  'daily',
   'weekly',
   'biweekly',
   'monthly',
   'yearly',
+  'custom',
 ]
 const ITEM_SOURCES: readonly ItemSource[] = ['guided-estimate', 'manual']
 
@@ -120,6 +124,16 @@ export function validateForecastItem(item: ForecastItem): ValidationResult {
 
   if (!isRecurrence(item.recurrence)) {
     errors.push('Item recurrence is not supported.')
+  }
+
+  if (
+    item.recurrence === 'custom' &&
+    (!Number.isSafeInteger(item.customIntervalDays) ||
+      item.customIntervalDays === undefined ||
+      item.customIntervalDays < 2 ||
+      item.customIntervalDays > 365)
+  ) {
+    errors.push('Custom recurrence must repeat every 2 to 365 days.')
   }
 
   if (!isItemSource(item.source)) {

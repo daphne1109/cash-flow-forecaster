@@ -24,9 +24,11 @@ The grocery and transport prompts expose weekly and biweekly recurrence. The
 day-to-day question recognises common variable routines - eating out, coffee,
 food delivery, outings, shopping, personal care, gym/sports, hobbies, and an
 other cost - and asks for a typical spend per occasion plus a realistic cadence.
-Bills and subscriptions are limited to monthly recurrence, while the final
-expected cost can be one-off, monthly, or yearly. These are intentionally
-constrained to the recurrence rules the domain engine can calculate and test.
+Every repeating answer can use daily, weekly, fortnightly, monthly, yearly, or
+a custom every-N-days cadence. Bills and subscriptions begin at monthly because
+that is the usual pattern, but users can change it. The final expected cost can
+also remain one-off. A custom cadence is bounded to 2-365 days and is always
+anchored to the date the user supplies.
 
 Every guided prompt has a Back control. A user who accidentally selects `Skip
 for now` can return to the immediately preceding question without restarting

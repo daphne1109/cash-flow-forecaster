@@ -8,6 +8,7 @@ export interface GuidedEstimateInput {
   amountCents: number
   firstOccurrenceDate: string
   recurrence: Recurrence
+  customIntervalDays?: number
 }
 
 /**

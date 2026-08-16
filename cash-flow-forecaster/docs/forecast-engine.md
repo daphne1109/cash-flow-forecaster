@@ -44,7 +44,7 @@ Corrupt or unavailable browser storage safely becomes an empty plan. The demo
 factory returns a fresh copy of the documented hand-worked scenario for a
 reliable first-run experience and demo recording.
 
-The model supports `once`, `weekly`, `biweekly`, `monthly`, and `yearly`
-recurrence. `biweekly` is deliberate: it represents common groceries and
-petrol habits from guided setup as an exact 14-day interval rather than an
-unverified monthly estimate.
+The model supports `once`, `daily`, `weekly`, `biweekly`, `monthly`, `yearly`,
+and `custom` recurrence. A custom item carries an explicit 2-365 day interval,
+so "every 3 days" stays anchored to its original first date when fast-forwarded
+into the forecast window. `biweekly` remains a convenient exact 14-day option.

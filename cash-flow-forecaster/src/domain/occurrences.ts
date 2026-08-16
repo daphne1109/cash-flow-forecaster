@@ -94,6 +94,8 @@ function findFirstOccurrenceInWindow(
   switch (item.recurrence) {
     case 'once':
       return null
+    case 'daily':
+      return fastForwardByDays(firstDate, startDate, 1)
     case 'weekly':
       return fastForwardByDays(firstDate, startDate, 7)
     case 'biweekly':
@@ -102,6 +104,8 @@ function findFirstOccurrenceInWindow(
       return fastForwardByMonths(firstDate, startDate)
     case 'yearly':
       return fastForwardByYears(firstDate, startDate)
+    case 'custom':
+      return fastForwardByDays(firstDate, startDate, item.customIntervalDays!)
   }
 }
 
@@ -156,6 +160,8 @@ function nextOccurrenceDate(
   switch (item.recurrence) {
     case 'once':
       return null
+    case 'daily':
+      return addDays(currentDate, 1)
     case 'weekly':
       return addDays(currentDate, 7)
     case 'biweekly':
@@ -164,5 +170,7 @@ function nextOccurrenceDate(
       return addMonths(currentDate, 1)
     case 'yearly':
       return addYears(currentDate, 1)
+    case 'custom':
+      return addDays(currentDate, item.customIntervalDays!)
   }
 }

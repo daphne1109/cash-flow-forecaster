@@ -66,7 +66,7 @@ export function ForecastDashboard({ plan, onPlanChange, onRestart }: ForecastDas
         <div className="panel-heading"><div><p className="step-label">Your inputs</p><h2 id="items-title">Scheduled money</h2></div><button className="button-quiet" type="button" onClick={() => { setEditingItem(null); setIsCreating(true) }}>Add item</button></div>
         <ul className="dashboard-item-list">
           {plan.items.length === 0 ? <li className="empty-items">No items yet. Add one to make the forecast more useful.</li> : plan.items.map((item) => <li key={item.id}>
-            <div><strong>{item.name}</strong><span>{item.source === 'guided-estimate' ? 'Estimated · ' : ''}{recurrenceLabel(item.recurrence)} · {formatDate(item.firstOccurrenceDate)}</span></div>
+            <div><strong>{item.name}</strong><span>{item.source === 'guided-estimate' ? 'Estimated · ' : ''}{recurrenceLabel(item.recurrence, item.customIntervalDays)} · {formatDate(item.firstOccurrenceDate)}</span></div>
             <div className="item-actions"><b className={item.type === 'income' ? 'income-amount' : 'expense-amount'}>{item.type === 'income' ? '+' : '-'}{formatCents(item.amountCents)}</b><button type="button" onClick={() => { setEditingItem(item); setIsCreating(false) }}>Edit</button><button type="button" onClick={() => removeItem(item)}>Remove</button></div>
           </li>)}
         </ul>
@@ -98,12 +98,14 @@ function ItemEditor({ item, onCancel, onSave }: ItemEditorProps) {
   const [amount, setAmount] = useState(item ? String(item.amountCents / 100) : '')
   const [firstDate, setFirstDate] = useState(item?.firstOccurrenceDate ?? '')
   const [recurrence, setRecurrence] = useState<Recurrence>(item?.recurrence ?? 'once')
+  const [customIntervalDays, setCustomIntervalDays] = useState(item?.customIntervalDays ? String(item.customIntervalDays) : '3')
   const [error, setError] = useState<string | null>(null)
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const amountCents = parseMoneyToCents(amount)
     if (amountCents === null) { setError('Enter a positive amount in Ringgit.'); return }
-    const next: ForecastItem = { id: item?.id ?? crypto.randomUUID(), name: name.trim(), type, amountCents, firstOccurrenceDate: firstDate, recurrence, source: item?.source ?? 'manual' }
+    const parsedCustomInterval = parseCustomIntervalDays(customIntervalDays)
+    const next: ForecastItem = { id: item?.id ?? crypto.randomUUID(), name: name.trim(), type, amountCents, firstOccurrenceDate: firstDate, recurrence, customIntervalDays: recurrence === 'custom' ? parsedCustomInterval ?? undefined : undefined, source: item?.source ?? 'manual' }
     const validation = validateForecastItem(next)
     if (!validation.isValid) { setError(validation.errors[0] ?? 'Check this item and try again.'); return }
     onSave(next)
@@ -113,7 +115,8 @@ function ItemEditor({ item, onCancel, onSave }: ItemEditorProps) {
     <label>Type<select value={type} onChange={(event) => setType(event.target.value as ForecastItem['type'])}><option value="expense">Expense</option><option value="income">Income</option></select></label>
     <label>Amount<input value={amount} inputMode="decimal" onChange={(event) => setAmount(event.target.value)} placeholder="RM 0.00" /></label>
     <label>First date<input type="date" value={firstDate} onChange={(event) => setFirstDate(event.target.value)} /></label>
-    <label>Recurrence<select value={recurrence} onChange={(event) => setRecurrence(event.target.value as Recurrence)}>{(['once', 'weekly', 'biweekly', 'monthly', 'yearly'] as const).map((value) => <option value={value} key={value}>{recurrenceLabel(value)}</option>)}</select></label>
+    <label>Recurrence<select value={recurrence} onChange={(event) => setRecurrence(event.target.value as Recurrence)}>{(['once', 'daily', 'weekly', 'biweekly', 'monthly', 'yearly', 'custom'] as const).map((value) => <option value={value} key={value}>{recurrenceLabel(value)}</option>)}</select></label>
+    {recurrence === 'custom' && <label>Every how many days?<input inputMode="numeric" value={customIntervalDays} onChange={(event) => setCustomIntervalDays(event.target.value)} placeholder="e.g. 3" /></label>}
     <div className="form-actions editor-actions"><button className="button-primary" type="submit">Save item</button><button className="button-quiet" type="button" onClick={onCancel}>Cancel</button></div>
   </form>{error && <p className="form-error" role="alert">{error}</p>}</section>
 }
@@ -128,4 +131,5 @@ function BalanceTooltip({ active, payload }: { active?: boolean; payload?: Reado
 function formatDate(key: string): string { const { year, month, day } = parseDateKey(key); return new Intl.DateTimeFormat('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(year, month - 1, day)) }
 function shortDate(key: string): string { const { month, day } = parseDateKey(key); return `${day}/${month}` }
 function signedCents(cents: number): string { return cents === 0 ? '—' : `${cents > 0 ? '+' : '-'}${formatCents(Math.abs(cents))}` }
-function recurrenceLabel(value: Recurrence): string { return value === 'biweekly' ? 'Every 2 weeks' : value === 'once' ? 'One-off' : value[0].toUpperCase() + value.slice(1) }
+function recurrenceLabel(value: Recurrence, customIntervalDays?: number): string { return value === 'custom' ? `Every ${customIntervalDays ?? '?'} days` : value === 'biweekly' ? 'Every 2 weeks' : value === 'once' ? 'One-off' : value[0].toUpperCase() + value.slice(1) }
+function parseCustomIntervalDays(value: string): number | null { return /^\d+$/.test(value) && Number(value) >= 2 && Number(value) <= 365 ? Number(value) : null }
