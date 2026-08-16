@@ -2,9 +2,9 @@
 
 This is the build plan for the Shortcut Asia Internship Challenge. It implements one complete workflow:
 
-> A user records their opening balance and scheduled income/expenses, then sees an auditable daily cash forecast, its lowest point, and any shortfall risk.
+> A user who does not yet have a clear budget answers a few practical prompts about their money habits. The app turns those answers into editable scheduled income/expense items, then shows an auditable daily cash forecast, its lowest point, and any shortfall risk.
 
-The goal is not to build a finance platform. The goal is to make one decision - **"when will my balance be tight, and why?"** - accurate, usable, and explainable.
+The goal is not to build a finance platform or automatically categorise bank transactions. The goal is to make one decision - **"when will my balance be tight, and why?"** - accurate, usable, and explainable, even when the user starts with only rough estimates.
 
 ## 0. Freeze the product contract before writing UI
 
@@ -13,6 +13,7 @@ Do this in a `DECISIONS.md` file before coding. Do not change these rules casual
 ### In scope
 
 - Single user, one local forecast plan.
+- A short guided money-discovery setup that asks about income, groceries, transport/petrol, household bills, and subscriptions, then creates editable forecast items from the answers.
 - Opening balance, forecast start date, and a fixed 30-day horizon.
 - Income and expense items that recur `once`, `weekly`, `monthly`, or `yearly`.
 - Add, edit, delete, save, load, forecast, daily ledger, lowest-balance insight, and first-negative-balance warning.
@@ -20,7 +21,8 @@ Do this in a `DECISIONS.md` file before coding. Do not change these rules casual
 
 ### Out of scope
 
-- User accounts, backend, bank data, notifications, budgets, data sharing, multiple currencies, real payment advice, tax, and arbitrary calendar rules.
+- User accounts, backend, bank data, transaction categorisation, notifications, budgets, data sharing, multiple currencies, real payment advice, tax, and arbitrary calendar rules.
+- Trying to infer exact spending from rough answers. The app labels these items as estimates and lets the user correct them; it never presents a guess as a fact.
 - 60-day forecasts until the 30-day version is complete and tested. If time remains, a horizon dropdown can be added without changing the engine.
 
 ### Exact business rules
@@ -40,6 +42,10 @@ Do this in a `DECISIONS.md` file before coding. Do not change these rules casual
 | First negative date | The earliest date whose end-of-day projected balance is below zero. |
 | Lowest date | The earliest date with the minimum projected end-of-day balance. |
 | Dates | Treat dates as local calendar dates (`YYYY-MM-DD`), never as timezone-dependent timestamps. |
+| Guided estimates | Answers from the discovery setup create normal editable `ForecastItem` records. The user can skip any prompt. |
+| Estimate transparency | Items created from a prompt are marked `Estimated` in the item list and ledger. This is context, not a different calculation rule. |
+| Groceries / petrol | User provides an amount per trip and approximate interval. This MVP supports weekly and every-two-weeks prompts only; do not add arbitrary interval rules. |
+| Bills / subscriptions | User provides an approximate amount and expected payment date; the item is created as monthly unless the user changes the recurrence. |
 
 ### Hand-worked acceptance scenario
 
@@ -286,6 +292,7 @@ Create `src/domain/types.ts`.
 ```ts
 export type ItemType = 'income' | 'expense';
 export type Recurrence = 'once' | 'weekly' | 'monthly' | 'yearly';
+export type ItemSource = 'guided-estimate' | 'manual';
 
 export interface ForecastItem {
   id: string;
@@ -294,6 +301,7 @@ export interface ForecastItem {
   amountCents: number;       // Always a positive integer.
   firstOccurrenceDate: string; // Local calendar date: YYYY-MM-DD.
   recurrence: Recurrence;
+  source: ItemSource;        // Keeps estimates transparent to the user.
 }
 
 export interface ForecastSettings {
@@ -473,7 +481,83 @@ Add a **Load demo data** button to the empty state. It should populate the hand-
 
 Sixth commit: `feat: persist forecast plans locally and add demo data`.
 
-## 7. Build the interface in workflow order (2-2.5 hours)
+## 7. Build guided money discovery before the full dashboard (60-75 minutes)
+
+### Why this is the right product change
+
+The original direct-entry form assumes the user already knows all their bills and spending patterns. That is often the very problem they are trying to solve. The guided setup reduces the blank-page problem: it asks about recognisable life events rather than finance terminology, then translates answers into editable planning inputs.
+
+It is still intentionally **not** expense tracking. The app does not claim to know where historical money went. It helps the user make a first, honest forecast from rough but useful estimates, then correct those estimates as they learn more.
+
+### Guided setup flow
+
+Show this after the opening-balance/start-date screen. Use a progress indicator such as `2 of 6`; provide `Skip for now` on every optional question and a visible `Add items manually instead` route. Never force the user to answer a question that does not apply to them.
+
+| Step | User-facing question | Inputs | Item created when saved | Reasoning |
+| --- | --- | --- | --- | --- |
+| 1 | "When do you usually get paid, and about how much arrives?" | amount, next pay date, monthly/weekly recurrence | Income item, marked `Estimated` | Income gives the forecast an anchor. |
+| 2 | "How often do you buy groceries, and about how much is one trip?" | `Weekly` or `Every 2 weeks`; amount; next/typical shopping date | Expense item named `Groceries`; weekly recurrence or biweekly representation described below | Uses a concrete habit users can estimate better than a monthly total. |
+| 3 | "Do you regularly pay for petrol or public transport?" | none / petrol / public transport; amount per top-up/trip; weekly or every-two-weeks; next date | Expense item named `Petrol` or `Transport` | Covers a recurring but easily forgotten cost without requiring vehicle or bank data. |
+| 4 | "Do you pay for a room, rent, electricity, water, phone, or internet?" | select applicable bill; approximate amount; payment date | One monthly expense per selected bill | Lets users recall obligations by real-world category. |
+| 5 | "Which subscriptions do you pay for?" | checkbox list: Spotify, YouTube Premium, iCloud/Apple storage, OneDrive, Google One, Goodnotes, Notability, Duolingo, Other; amount and billing date per selected item | One monthly expense per selection | Prompts common invisible repeat charges without asserting the user has them. |
+| 6 | "Anything else you expect to pay in the next 30 days?" | optional name, amount, date, one-off/monthly | Editable item | Captures a known exceptional cost such as insurance, a trip, or a fee. |
+
+### Critical scope decision: biweekly habits
+
+The original calculation engine supports only `once`, `weekly`, `monthly`, and `yearly`. Do **not** quietly add an unsupported `biweekly` recurrence after the UI offers "Every 2 weeks." Choose one of these two approaches **before implementation**:
+
+1. **Recommended:** add a small, explicit `biweekly` recurrence to the domain model, recurrence expander, validation, documentation, and tests. This fits the actual grocery/petrol user prompt and is only one well-defined 14-day rule.
+2. **Lower-scope fallback:** only offer `Weekly` and `Monthly` in guided setup; phrase the question as "Do you usually buy groceries about once a week?" and let the user create a manual one-off estimate otherwise.
+
+For this product, use option 1 if the developer can implement and test it in under 30 minutes. Add `biweekly` everywhere consistently:
+
+```ts
+export type Recurrence = 'once' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+```
+
+`biweekly` advances exactly 14 calendar days from the first occurrence. Add tests for a backdated biweekly item and an occurrence crossing a month boundary. If the core engine is not already passing, choose the lower-scope fallback; correctness remains more important than a richer prompt.
+
+### How a guided answer becomes a forecast item
+
+The guided UI must be a thin translation layer, not a second forecast system. For example:
+
+```ts
+function createEstimatedItem(answer: GroceryAnswer): ForecastItem {
+  return {
+    id: crypto.randomUUID(),
+    name: 'Groceries',
+    type: 'expense',
+    amountCents: parseMoneyToCents(answer.amount)!,
+    firstOccurrenceDate: answer.nextShoppingDate,
+    recurrence: answer.frequency,
+    source: 'guided-estimate',
+  };
+}
+```
+
+After a prompt is saved, show a plain-language confirmation: `Added an estimated weekly Groceries expense of RM120.00 from 3 Aug. You can edit this anytime.` The generated item then appears in the same `ItemList`, uses the same calculation engine, and can be edited/deleted exactly like a manually added item.
+
+### Guided-input validation
+
+- Amounts use the same `parseMoneyToCents` helper and rounding rule as manual items.
+- A selected bill/subscription requires an amount and a first/next billing date; otherwise do not create an item.
+- Keep the common-subscription list as suggestions, not pre-selected charges.
+- The user must be able to change the generated name, amount, date, recurrence, or remove the item later.
+- Label generated entries as `Estimated`, and explain that the forecast is only as reliable as its inputs.
+- Do not calculate a monthly groceries total from a vague answer. Preserve the stated per-trip amount and actual recurrence so the ledger stays auditable.
+
+### Tests for guided discovery
+
+- A skipped prompt creates no item and does not block completion.
+- A valid grocery answer creates one `guided-estimate` expense with the expected cents, start date, and recurrence.
+- An answer of `RM 12.34` creates `amountCents: 1234`.
+- Editing a generated item changes the forecast exactly as if it had been manually created.
+- Deleting a generated item removes it from local storage and the forecast.
+- A backdated guided weekly/biweekly grocery item still produces in-window occurrences.
+
+Seventh commit: `feat: guide users from money habits to editable forecast items`.
+
+## 8. Build the interface in workflow order (2-2.5 hours)
 
 Use one responsive page. Avoid routing, modals, dashboards, and multi-page navigation.
 
@@ -484,11 +568,15 @@ Header: "Cashflow" + short promise
 
 Setup card
   Opening balance [RM input]    Forecast start [date input]
-  "Your next 30 days"          [Save settings]
+  "Your next 30 days"          [Start guided setup]
+
+Guided setup (first use only; all steps skippable)
+  Income -> groceries -> transport -> bills -> subscriptions -> other expected costs
+  Each answer becomes an editable estimated item
 
 Scheduled items card
-  [Add income or expense] button
-  Item table/list with name, amount, first date, recurrence, edit, delete
+  [Add item manually] button  [Review guided estimates] button
+  Item table/list with name, Estimated/manual context, amount, first date, recurrence, edit, delete
 
 Forecast section (only when settings are valid)
   Insight cards: lowest balance/date | first shortfall / "No shortfall projected"
@@ -503,9 +591,11 @@ Footer note: local-only prototype; no financial advice
 | Component | Responsibility |
 | --- | --- |
 | `App` | Own plan state, load/save boundary, derive `ForecastResult` from valid settings and items. |
-| `SettingsForm` | Opening balance and start date; inline validation; saves only valid settings. |
+| `SettingsForm` | Opening balance and start date; inline validation; starts guided setup or manual entry. |
+| `GuidedSetup` | Controls the six skippable question steps and creates normal editable estimated items. |
+| `PromptStep` | Renders one question, validates its answer, and emits an item-creation intent; it never calculates a forecast. |
 | `ItemForm` | Add/edit one item. Handles field-level input conversion and validation. |
-| `ItemList` | Shows saved items; sends edit/delete intents upward. |
+| `ItemList` | Shows saved items and `Estimated` context; sends edit/delete intents upward. |
 | `ForecastSummary` | Renders the low-point and negative-balance messages from `ForecastResult`. |
 | `ForecastChart` | Receives already-calculated daily rows and renders only them. |
 | `DailyLedger` | Shows the same rows in auditable text/table form. |
@@ -540,6 +630,8 @@ Validation:
 
 Each row shows name, `+RM` or `-RM` with a semantic income/expense colour **and text label**, first date, recurrence, Edit, Delete. Deleting requires a small confirmation statement such as "Remove Rent?" to avoid accidental loss. A browser confirmation is acceptable for this time-boxed app.
 
+For an item created from guided setup, display a small `Estimated` label beside the name. It means "this started as the user's rough answer", not "this figure is lower quality because the app generated it." Give the user one visible action such as `Edit estimate` so the label invites correction rather than undermining trust.
+
 ### Forecast summary specification
 
 Always show:
@@ -573,30 +665,31 @@ Show all 30 days. For each row:
 
 Highlight the low-balance row and first-negative row with an accessible text badge. This ledger is the evidence trail for the chart.
 
-Seventh commit: `feat: add settings and recurring cashflow item workflow`.
+Eighth commit: `feat: add settings and recurring cashflow item workflow`.
 
-Eighth commit: `feat: present auditable daily forecast summary and ledger`.
+Ninth commit: `feat: present auditable daily forecast summary and ledger`.
 
-Ninth commit: `feat: add balance chart to forecast view`.
+Tenth commit: `feat: add balance chart to forecast view`.
 
-## 8. Finish the product, not the feature list (60-90 minutes)
+## 9. Finish the product, not the feature list (60-90 minutes)
 
 ### Manual verification script
 
 Perform these checks in the browser and write their results in `README.md`:
 
 1. Start blank: page explains what to do and does not crash.
-2. Load demo data: forecast matches the known-answer scenario in the test.
-3. Add an expense: it appears in the item list, forecast and ledger.
-4. Edit the insurance amount: the lowest point changes immediately and correctly.
-5. Delete that item: it disappears everywhere.
-6. Refresh: settings and items remain; forecast is regenerated correctly.
-7. Try invalid amount, empty name, monthly day 31, and 29 February yearly item: each is blocked with a clear message.
-8. Enter an opening balance below RM0 with no item on the start day: confirm the warning says the balance is already negative on the forecast start date.
-9. Add a weekly item whose first date is before the start date: confirm its in-window weekly dates appear in the ledger.
-10. Enter RM12.34 as an amount: confirm the ledger and stored item use RM12.34 exactly, not RM12.33 or RM12.35.
-11. Test a narrow browser width: forms, summary cards and ledger remain usable; horizontal ledger scrolling is acceptable if labelled.
-12. Run `npm test` and `npm run build` successfully.
+2. Complete only the income and groceries prompts, skip the rest: the app creates exactly those editable estimated items and shows a forecast.
+3. Load demo data: forecast matches the known-answer scenario in the test.
+4. Add a manual expense: it appears in the item list, forecast and ledger.
+5. Edit an estimated insurance amount: the lowest point changes immediately and correctly.
+6. Delete that item: it disappears everywhere.
+7. Refresh: settings and items remain; forecast is regenerated correctly.
+8. Try invalid amount, empty name, monthly day 31, and 29 February yearly item: each is blocked with a clear message.
+9. Enter an opening balance below RM0 with no item on the start day: confirm the warning says the balance is already negative on the forecast start date.
+10. Add a weekly item whose first date is before the start date: confirm its in-window weekly dates appear in the ledger.
+11. Enter RM12.34 as an amount: confirm the ledger and stored item use RM12.34 exactly, not RM12.33 or RM12.35.
+12. Test a narrow browser width: forms, summary cards and ledger remain usable; horizontal ledger scrolling is acceptable if labelled.
+13. Run `npm test` and `npm run build` successfully.
 
 ### Minimal visual quality pass
 
@@ -606,9 +699,9 @@ Perform these checks in the browser and write their results in `README.md`:
 - Make button verbs clear: `Save settings`, `Add item`, `Update item`, `Load demo data`.
 - Fix clipped values, date-format ambiguity, and inconsistent money formatting before adding any visual decoration.
 
-Tenth commit: `fix: validate edge cases and refine forecast usability`.
+Eleventh commit: `fix: validate guided estimates and forecast edge cases`.
 
-## 9. Documentation that supports the score (60 minutes)
+## 10. Documentation that supports the score (60 minutes)
 
 ### `README.md` structure
 
@@ -650,9 +743,9 @@ Fill this only with true events. Example table format:
 
 Never claim an AI rejection that did not happen. Honest, modest AI use is stronger than a theatrical story.
 
-Eleventh commit: `docs: explain forecast decisions, verification and AI use`.
+Twelfth commit: `docs: explain forecast decisions, verification and AI use`.
 
-## 10. Demo and submission (60-90 minutes)
+## 11. Demo and submission (60-90 minutes)
 
 ### Prepare a clean demo state
 
@@ -662,12 +755,12 @@ Use the hand-worked scenario. Confirm the displayed values match the latest test
 
 | Time | What to say and show |
 | ---: | --- |
-| 0:00-0:25 | "Cashflow helps a person with regular bills see their daily balance and the date it becomes tight." State the deliberately small scope. |
-| 0:25-1:10 | Show opening balance and the five demo items. Explain the recurrence options are limited intentionally to rules the prototype can calculate and verify correctly. |
-| 1:10-2:00 | Show lowest balance, shortfall warning, chart, then ledger. Pick 20/24 August and show the transactions that explain the result. |
-| 2:00-2:35 | Edit insurance or groceries. Show the low point move and explain that the UI is rendering a recalculated pure forecast result. |
+| 0:00-0:25 | "People often want to forecast money precisely because they do not remember every recurring cost. Cashflow starts by asking about everyday habits." State the deliberately small scope. |
+| 0:25-1:15 | Show the guided groceries, transport, bills, and subscription prompts. Answer or skip one. Explain that each answer creates an editable estimate, not a claim about the user's real spending history. |
+| 1:15-2:00 | Show the generated items, then lowest balance, shortfall warning, chart, and ledger. Pick 20/24 August and show the transactions that explain the result. |
+| 2:00-2:35 | Edit an estimated insurance, grocery, or petrol amount. Show the low point move and explain that the UI is rendering a recalculated pure forecast result. |
 | 2:35-3:25 | Open the relevant test/engine file. Explain recurrence expansion, daily aggregation, integer cents, and the known-answer test. |
-| 3:25-4:00 | State AI use truthfully, one limitation, and what you would validate before production. |
+| 3:25-4:00 | State AI use truthfully, one limitation (estimates still require user correction), and what you would validate before production. |
 
 ### Final submission checklist
 
@@ -685,11 +778,12 @@ Use the hand-worked scenario. Confirm the displayed values match the latest test
 Protect work in this order:
 
 1. Correct forecast engine and automated tests.
-2. Settings + add/edit/delete item workflow.
-3. Daily ledger + lowest/negative insights.
+2. Opening balance + one guided income/groceries prompt that creates editable items.
+3. Add/edit/delete item workflow and daily ledger + lowest/negative insights.
 4. Local storage and manual verification.
 5. README, AI notes, and demo.
-6. Chart.
-7. Any extra polish.
+6. Remaining guided prompts (transport, bills, subscriptions, other).
+7. Chart.
+8. Any extra polish.
 
 Do not sacrifice verification or explainability for charts, deployment extras, or feature volume. A ledger with a tested calculation engine is already a complete product workflow; a polished but unverified chart is not.

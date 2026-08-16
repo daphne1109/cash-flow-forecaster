@@ -1,0 +1,85 @@
+<div id="cashflow-flow" aria-label="Cashflow user-flow mockup">
+  <style>
+    #cashflow-flow {
+      color: light-dark(#17212b, #edf3f8);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    #cashflow-flow .flow-nav { display: flex; gap: .45rem; flex-wrap: wrap; margin: 0 0 1rem; }
+    #cashflow-flow .flow-nav button { padding: .45rem .7rem; border: 1px solid light-dark(#cbd5df, #475569); border-radius: .5rem; background: light-dark(#fff, #18232e); color: inherit; cursor: pointer; }
+    #cashflow-flow .flow-nav button[aria-selected="true"] { background: light-dark(#075985, #38bdf8); color: light-dark(#fff, #06233a); border-color: transparent; }
+    #cashflow-flow .window { overflow: hidden; border: 1px solid light-dark(#cad5df, #3b4d5d); border-radius: .85rem; background: light-dark(#f6f9fb, #111b24); box-shadow: 0 12px 30px light-dark(#a7b7c522, #00000044); }
+    #cashflow-flow .topbar { display: flex; align-items: center; justify-content: space-between; padding: .85rem 1rem; background: light-dark(#fff, #18232e); border-bottom: 1px solid light-dark(#d8e0e7, #364657); }
+    #cashflow-flow .brand { font-weight: 700; letter-spacing: -.02em; }
+    #cashflow-flow .tag { font-size: .82rem; color: light-dark(#4b6274, #afc0ce); }
+    #cashflow-flow .content { padding: 1rem; min-height: 400px; }
+    #cashflow-flow .eyebrow { font-size: .8rem; color: light-dark(#486273, #a7bac9); margin: 0 0 .35rem; }
+    #cashflow-flow h2 { font-size: 1.25rem; margin: 0 0 .35rem; }
+    #cashflow-flow p { margin: .35rem 0; }
+    #cashflow-flow .muted { color: light-dark(#526a7c, #afbfcb); }
+    #cashflow-flow .card { background: light-dark(#fff, #18232e); border: 1px solid light-dark(#d7e0e7, #3b4d5d); border-radius: .7rem; padding: .9rem; margin-top: .9rem; }
+    #cashflow-flow .formgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+    #cashflow-flow label { display: grid; gap: .3rem; font-size: .84rem; font-weight: 600; }
+    #cashflow-flow input, #cashflow-flow select { box-sizing: border-box; width: 100%; padding: .55rem; border-radius: .4rem; border: 1px solid light-dark(#aebdca, #52687a); background: light-dark(#fff, #0f1820); color: inherit; }
+    #cashflow-flow .primary { margin-top: .8rem; padding: .6rem .8rem; border: 0; border-radius: .45rem; background: light-dark(#075985, #38bdf8); color: light-dark(#fff, #06233a); font-weight: 700; }
+    #cashflow-flow .secondary { margin-top: .8rem; padding: .58rem .75rem; border: 1px solid light-dark(#aebdca, #52687a); border-radius: .45rem; background: transparent; color: inherit; }
+    #cashflow-flow .row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .72rem 0; border-bottom: 1px solid light-dark(#e3e9ee, #314150); }
+    #cashflow-flow .row:last-child { border-bottom: 0; }
+    #cashflow-flow .amount { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+    #cashflow-flow .income { color: light-dark(#087443, #7ee0ad); }
+    #cashflow-flow .expense { color: light-dark(#b42318, #ffaaa2); }
+    #cashflow-flow .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+    #cashflow-flow .stat { padding: .75rem; border-radius: .6rem; background: light-dark(#e8f3fa, #112b3d); }
+    #cashflow-flow .stat.warn { background: light-dark(#fff0ef, #3b2022); }
+    #cashflow-flow .statlabel { display: block; font-size: .78rem; color: light-dark(#496273, #bdccd8); }
+    #cashflow-flow .statvalue { display: block; margin-top: .25rem; font-size: 1.05rem; font-weight: 700; }
+    #cashflow-flow .chart { height: 118px; margin-top: .9rem; padding: .6rem; border-radius: .6rem; background: light-dark(#f1f5f8, #101c27); }
+    #cashflow-flow .chart svg { display: block; width: 100%; height: 100%; }
+    #cashflow-flow .notice { padding: .75rem; border-radius: .55rem; margin-top: .8rem; background: light-dark(#fff6dc, #3a2d14); color: light-dark(#6a4700, #ffe49b); }
+    #cashflow-flow .empty { text-align: center; padding: 2.4rem 1rem; }
+    #cashflow-flow .error { color: light-dark(#b42318, #ffaaa2); font-size: .8rem; margin-top: .35rem; }
+    #cashflow-flow .legend { display: flex; gap: .8rem; flex-wrap: wrap; font-size: .8rem; color: light-dark(#4b6274, #afc0ce); margin-top: .55rem; }
+    #cashflow-flow .dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; margin-right: .25rem; background: light-dark(#075985, #38bdf8); }
+    #cashflow-flow .dot.warn { background: light-dark(#b42318, #ffaaa2); }
+    #cashflow-flow .actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    @media (max-width: 480px) { #cashflow-flow .formgrid, #cashflow-flow .summary { grid-template-columns: 1fr; } #cashflow-flow .content { padding: .8rem; } }
+  </style>
+
+  <div class="flow-nav" role="tablist" aria-label="User-flow steps">
+    <button type="button" role="tab" aria-selected="true" data-step="0">1. First visit</button>
+    <button type="button" role="tab" aria-selected="false" data-step="1">2. Starting balance</button>
+    <button type="button" role="tab" aria-selected="false" data-step="2">3. Income</button>
+    <button type="button" role="tab" aria-selected="false" data-step="3">4. Everyday costs</button>
+    <button type="button" role="tab" aria-selected="false" data-step="4">5. Bills & subscriptions</button>
+    <button type="button" role="tab" aria-selected="false" data-step="5">6. Forecast</button>
+    <button type="button" role="tab" aria-selected="false" data-step="6">7. Adjust estimate</button>
+  </div>
+
+  <section class="window" aria-live="polite">
+    <div class="topbar"><span class="brand">Cashflow</span><span class="tag">Your next 30 days</span></div>
+    <div class="content" id="flow-screen"></div>
+  </section>
+
+  <script>
+    (() => {
+      const root = document.getElementById('cashflow-flow');
+      const screen = root.querySelector('#flow-screen');
+      const buttons = [...root.querySelectorAll('[role="tab"]')];
+      const screens = [
+        `<div class="empty"><p class="eyebrow">First visit</p><h2>Start with everyday habits, not a perfect budget.</h2><p class="muted">Answer a few simple questions about bills and spending. Cashflow turns your rough answers into editable estimates for the next 30 days.</p><button class="primary" type="button">Build my first forecast</button><p class="muted" style="font-size:.84rem;margin-top:1rem">Every question is optional. You can skip anything you do not know yet.</p><button class="secondary" type="button">Load demo data</button></div>`,
+        `<p class="eyebrow">Setup · 1 of 6</p><h2>What is in your account today?</h2><p class="muted">Your opening balance is the starting point, before scheduled payments on this date.</p><div class="card"><div class="formgrid"><label>Opening balance<input value="RM 1,000.00" aria-label="Opening balance" /></label><label>Forecast starts<input type="date" value="2026-08-01" aria-label="Forecast start date" /></label></div><button class="primary" type="button">Continue</button><button class="secondary" type="button">I will add items manually</button></div>`,
+        `<p class="eyebrow">Guided setup · 2 of 6</p><h2>When do you usually get paid?</h2><p class="muted">An approximate amount is enough. You can change it later.</p><div class="card"><div class="formgrid"><label>Amount received<input value="RM 2,500.00" aria-label="Income amount" /></label><label>Next pay date<input type="date" value="2026-08-01" aria-label="Next pay date" /></label><label>How often?<select aria-label="Income recurrence"><option>Monthly</option><option>Weekly</option></select></label></div><button class="primary" type="button">Add estimated income</button><button class="secondary" type="button">Skip for now</button></div><p class="legend"><span><i class="dot"></i>Creates an editable Estimated income item</span></p>`,
+        `<p class="eyebrow">Guided setup · 3 of 6</p><h2>How often do you buy groceries?</h2><p class="muted">Think about one typical trip, not the whole month.</p><div class="card"><div class="formgrid"><label>Usually<input value="RM 120.00" aria-label="Grocery amount per trip" /></label><label>How often?<select aria-label="Grocery recurrence"><option>Weekly</option><option>Every 2 weeks</option></select></label><label>Next grocery trip<input type="date" value="2026-08-03" aria-label="Next grocery date" /></label></div><button class="primary" type="button">Add estimated groceries</button><button class="secondary" type="button">Skip for now</button></div><div class="card"><p class="eyebrow">Also useful to estimate</p><div class="row"><span><strong>Petrol or public transport</strong><br><span class="muted">How much per top-up/trip?</span></span><button class="secondary" type="button">Add</button></div></div>`,
+        `<p class="eyebrow">Guided setup · 4 of 6</p><h2>Which regular bills do you pay?</h2><p class="muted">Select only the ones that apply. Each becomes an estimate you can edit later.</p><div class="card"><div class="row"><span><strong>Rent / room</strong><br><span class="muted">Monthly payment</span></span><button class="secondary" type="button">Add</button></div><div class="row"><span><strong>Electricity or water</strong><br><span class="muted">Approximate monthly bill</span></span><button class="secondary" type="button">Add</button></div><div class="row"><span><strong>Phone or internet</strong><br><span class="muted">Approximate monthly bill</span></span><button class="secondary" type="button">Add</button></div></div><button class="primary" type="button">Continue to subscriptions</button><button class="secondary" type="button">Skip for now</button>`,
+        `<p class="eyebrow">Guided setup · 5 of 6</p><h2>Any subscriptions you pay for?</h2><p class="muted">Small repeat charges are easy to forget. Add only what you recognise.</p><div class="card"><div class="row"><span><strong>Spotify</strong><br><span class="muted">Monthly subscription</span></span><button class="secondary" type="button">Add</button></div><div class="row"><span><strong>YouTube Premium</strong><br><span class="muted">Monthly subscription</span></span><button class="secondary" type="button">Add</button></div><div class="row"><span><strong>iCloud / OneDrive / Google One</strong><br><span class="muted">Storage subscription</span></span><button class="secondary" type="button">Add</button></div><div class="row"><span><strong>Other subscription</strong></span><button class="secondary" type="button">Add</button></div></div><button class="primary" type="button">See my forecast</button><button class="secondary" type="button">Skip for now</button>`,
+        `<p class="eyebrow">Your forecast</p><h2>Here is the point to plan around.</h2><div class="summary"><div class="stat"><span class="statlabel">Lowest projected balance</span><span class="statvalue">-RM100.00</span><span class="muted">24 Aug 2026</span></div><div class="stat warn"><span class="statlabel">First shortfall</span><span class="statvalue">24 Aug 2026</span><span class="muted">After estimated groceries</span></div></div><div class="notice"><strong>Your balance first goes below RM0 on 24 Aug.</strong> This forecast uses your estimates. Review the ledger to see why.</div><div class="chart" aria-label="End-of-day balance chart"><svg viewBox="0 0 500 110" role="img" aria-label="Balance falls below zero near 24 August"><line x1="8" y1="65" x2="492" y2="65" stroke="currentColor" opacity=".28"/><path d="M10 20 L75 26 L130 34 L190 44 L245 50 L300 56 L360 60 L414 76 L490 82" fill="none" stroke="light-dark(#075985,#38bdf8)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="414" cy="76" r="6" fill="light-dark(#b42318,#ffaaa2)"/><text x="388" y="102" fill="currentColor" font-size="12">24 Aug</text></svg></div><div class="card"><div class="row"><span><strong>24 Aug</strong><br><span class="muted">Groceries · Estimated</span></span><span class="amount expense">-RM120.00</span></div><div class="row"><span><strong>End-of-day balance</strong></span><span class="amount expense">-RM100.00</span></div></div>`,
+        `<p class="eyebrow">Review an estimate</p><h2>What if groceries cost less?</h2><p class="muted">Every guided answer remains editable. Updating it recalculates the same 30-day forecast.</p><div class="card"><div class="row"><span><strong>Groceries</strong><br><span class="muted">Estimated · Weekly · 3 Aug</span></span><span class="amount expense">-RM120.00</span></div><div class="formgrid"><label>Typical trip<input value="RM 90.00" aria-label="Updated grocery amount" /></label><label>How often?<select aria-label="Updated grocery recurrence"><option>Weekly</option><option>Every 2 weeks</option></select></label></div><div class="actions"><button class="primary" type="button">Update estimate</button><button class="secondary" type="button">Remove item</button></div></div><div class="summary"><div class="stat"><span class="statlabel">New lowest balance</span><span class="statvalue">RM20.00</span><span class="muted">24 Aug 2026</span></div><div class="stat"><span class="statlabel">Result</span><span class="statvalue">No shortfall projected</span><span class="muted">in the next 30 days</span></div></div><p class="legend"><span><i class="dot"></i>All estimates are editable and saved on this device</span><span><i class="dot warn"></i>No bank connection or financial advice</span></p>`
+      ];
+      function render(index) {
+        screen.innerHTML = screens[index];
+        buttons.forEach((button, i) => button.setAttribute('aria-selected', String(i === index)));
+      }
+      buttons.forEach(button => button.addEventListener('click', () => render(Number(button.dataset.step))));
+      render(0);
+    })();
+  </script>
+</div>
