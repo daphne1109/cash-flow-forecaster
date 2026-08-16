@@ -6,11 +6,11 @@ into an editable 30-day cash forecast.
 
 ## Current milestone
 
-Project foundation and recurrence expansion are complete: React, TypeScript,
-Vite, Vitest, and a production-build check are configured. The pure domain
-layer validates forecast items/settings and expands one-off, weekly, biweekly,
-monthly, and yearly items into dated occurrences. Forecast aggregation and the
-guided setup interface are not yet built.
+Project foundation, forecast calculation, and local persistence are complete:
+React, TypeScript, Vite, Vitest, and a production-build check are configured.
+The pure domain layer validates inputs, expands recurring schedules, calculates
+daily balances, and safely saves source data in browser local storage. The
+guided setup interface is not yet built.
 
 ## Run locally
 

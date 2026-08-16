@@ -35,6 +35,15 @@ rather than asking users to trust an opaque result. The summary deliberately
 keeps the earliest date for a tied low balance and treats a negative opening
 balance as negative on the forecast start date.
 
+## Local persistence and demo data
+
+`src/storage/forecastStore.ts` stores only validated plan settings and source
+items under a versioned browser key. On every successful load, the UI will call
+the pure forecast engine again rather than trust persisted derived balances.
+Corrupt or unavailable browser storage safely becomes an empty plan. The demo
+factory returns a fresh copy of the documented hand-worked scenario for a
+reliable first-run experience and demo recording.
+
 The model supports `once`, `weekly`, `biweekly`, `monthly`, and `yearly`
 recurrence. `biweekly` is deliberate: it represents common groceries and
 petrol habits from guided setup as an exact 14-day interval rather than an
