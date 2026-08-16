@@ -15,6 +15,14 @@ import {
 } from './types'
 
 /**
+ * Recurrence expansion for the forecast domain.
+ *
+ * Source items remain compact records; this module is the only place that
+ * translates their recurrence rules into the dated cash movements consumed by
+ * the daily forecast calculation.
+ */
+
+/**
  * Converts one scheduled item into every dated occurrence inside an inclusive
  * forecast window. The result is intentionally independent of React and
  * storage so it can be tested and reused by the forecast engine.
@@ -57,6 +65,7 @@ function assertValidItem(item: ForecastItem): void {
   }
 }
 
+/** Guards the inclusive date range expected by every recurrence algorithm. */
 function assertValidWindow(startDate: DateKey, endDate: DateKey): void {
   if (!isValidDateKey(startDate) || !isValidDateKey(endDate)) {
     throw new RangeError('Forecast window dates must be real YYYY-MM-DD dates.')
@@ -102,6 +111,8 @@ function fastForwardByDays(
   intervalDays: number,
 ): DateKey {
   const daysUntilStart = differenceInCalendarDays(firstDate, startDate)
+  // Ceiling division preserves the recurrence's original cadence. For example,
+  // a 1 July weekly item produces 5 August, not an arbitrary 1 August entry.
   const intervalsToSkip = Math.ceil(daysUntilStart / intervalDays)
 
   return addDays(firstDate, intervalsToSkip * intervalDays)
@@ -114,6 +125,8 @@ function fastForwardByMonths(firstDate: DateKey, startDate: DateKey): DateKey {
     (start.year - first.year) * 12 + (start.month - first.month)
   let candidate = addMonths(firstDate, monthsUntilStart)
 
+  // The same calendar month may still be before the window when the scheduled
+  // day is earlier than the forecast start day.
   if (compareDateKeys(candidate, startDate) < 0) {
     candidate = addMonths(candidate, 1)
   }
@@ -126,6 +139,8 @@ function fastForwardByYears(firstDate: DateKey, startDate: DateKey): DateKey {
   const start = parseDateKey(startDate)
   let candidate = addYears(firstDate, start.year - first.year)
 
+  // A matching year is not sufficient when that year's scheduled date has
+  // already passed before the forecast start.
   if (compareDateKeys(candidate, startDate) < 0) {
     candidate = addYears(candidate, 1)
   }

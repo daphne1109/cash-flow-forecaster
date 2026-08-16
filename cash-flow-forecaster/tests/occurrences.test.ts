@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { ForecastItem } from '../src/domain/types'
 import { expandOccurrences } from '../src/domain/occurrences'
 
+/**
+ * Creates a valid baseline item so each test can isolate one recurrence rule
+ * or boundary condition without repeating unrelated valid input.
+ */
 function createItem(overrides: Partial<ForecastItem> = {}): ForecastItem {
   return {
     id: 'groceries',
@@ -16,6 +20,8 @@ function createItem(overrides: Partial<ForecastItem> = {}): ForecastItem {
 }
 
 describe('recurrence expansion', () => {
+  // The final day is inclusive: forecast calculation must not lose a payment
+  // simply because it falls at the boundary of the selected 30-day window.
   it('includes a one-off item only when it falls inside the inclusive window', () => {
     const inWindow = expandOccurrences(
       createItem({ recurrence: 'once', firstOccurrenceDate: '2026-08-30' }),
