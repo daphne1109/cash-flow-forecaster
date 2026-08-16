@@ -126,6 +126,29 @@ export function addYears(dateKey: string, years: number): string {
   return formatDateKey({ year: year + years, month, day })
 }
 
+/**
+ * Returns the number of whole local calendar days from `start` to `end`.
+ *
+ * Both values are reconstructed at local midnight so daylight-saving changes
+ * cannot turn a calendar-day difference into a fractional result.
+ */
+export function differenceInCalendarDays(start: string, end: string): number {
+  const startParts = parseDateKey(start)
+  const endParts = parseDateKey(end)
+  const startMidnight = new Date(
+    startParts.year,
+    startParts.month - 1,
+    startParts.day,
+  ).getTime()
+  const endMidnight = new Date(
+    endParts.year,
+    endParts.month - 1,
+    endParts.day,
+  ).getTime()
+
+  return Math.round((endMidnight - startMidnight) / (24 * 60 * 60 * 1000))
+}
+
 export function daysInInclusiveRange(start: string, end: string): string[] {
   if (compareDateKeys(start, end) > 0) {
     throw new RangeError('Range start must be on or before range end.')

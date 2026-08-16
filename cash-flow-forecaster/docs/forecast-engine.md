@@ -18,6 +18,14 @@ timezone. Month/year helpers reject impossible target dates rather than quietly
 rolling them into a different month; the item validation rules make those cases
 unreachable for recurring monthly/yearly items.
 
+## Recurrence expansion
+
+`src/domain/occurrences.ts` expands a source item into signed dated
+occurrences inside an inclusive forecast window. Its first task is to
+fast-forward backdated recurring items: a weekly item that starts in July still
+produces all of its August dates. One-off items before the window produce no
+occurrences. The next forecast step will aggregate these occurrences by day.
+
 The model supports `once`, `weekly`, `biweekly`, `monthly`, and `yearly`
 recurrence. `biweekly` is deliberate: it represents common groceries and
 petrol habits from guided setup as an exact 14-day interval rather than an

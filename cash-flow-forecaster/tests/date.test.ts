@@ -4,6 +4,7 @@ import {
   addMonths,
   addYears,
   compareDateKeys,
+  differenceInCalendarDays,
   daysInInclusiveRange,
   formatDateKey,
   parseDateKey,
@@ -26,6 +27,11 @@ describe('local calendar dates', () => {
   it('adds days over month boundaries', () => {
     expect(addDays('2026-08-31', 1)).toBe('2026-09-01')
     expect(addDays('2026-01-01', -1)).toBe('2025-12-31')
+  })
+
+  it('measures differences as local calendar days', () => {
+    expect(differenceInCalendarDays('2026-08-01', '2026-08-31')).toBe(30)
+    expect(differenceInCalendarDays('2026-08-31', '2026-08-01')).toBe(-30)
   })
 
   it('adds valid calendar months and years without silently changing the day', () => {
