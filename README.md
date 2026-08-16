@@ -2,6 +2,8 @@
 
 Cashflow helps a student or early-career worker turn rough memories about income and spending into an editable, explainable 30-day cash forecast.
 
+The application source is in [`cash-flow-forecaster/`](cash-flow-forecaster/).
+
 ## The user problem and workflow
 
 People often need a cash forecast precisely because they do not already have a complete budget. They may remember rent and salary, but overlook meals out, subscriptions, groceries, or a bill due later in the month.
@@ -43,6 +45,7 @@ flowchart LR
 Tested with Node `22.17.1` and npm `10.9.2`.
 
 ```bash
+cd cash-flow-forecaster
 npm install
 npm run dev
 ```
@@ -76,4 +79,4 @@ The app forecasts scheduled estimates; it does not know a user's real payment hi
 
 ## AI use
 
-See [AI_USAGE.md](AI_USAGE.md) for a factual record of AI-assisted work and the review performed for each use.
+See [AI_USAGE.md](cash-flow-forecaster/AI_USAGE.md) for a factual record of AI-assisted work and the review performed for each use.
